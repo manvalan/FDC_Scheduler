@@ -1,8 +1,8 @@
-#include "edge.hpp"
+#include "fdc_scheduler/edge.hpp"
 #include <algorithm>
 #include <cmath>
 
-namespace fdc {
+namespace fdc_scheduler {
 
 Edge::Edge(std::string from_node_id,
            std::string to_node_id,
@@ -73,4 +73,4 @@ void from_json(const nlohmann::json& j, Edge& edge) {
     edge = Edge(from_node, to_node, distance, track_type, max_speed, capacity, bidirectional);
 }
 
-} // namespace fdc
+} // namespace fdc_scheduler

@@ -1,7 +1,7 @@
-#include "node.hpp"
+#include "fdc_scheduler/node.hpp"
 #include <algorithm>
 
-namespace fdc {
+namespace fdc_scheduler {
 
 Node::Node(std::string id, 
            std::string name,
@@ -149,4 +149,4 @@ void from_json(const nlohmann::json& j, Node& node) {
     node = Node(id, name, type, latitude, longitude, capacity, platforms);
 }
 
-} // namespace fdc
+} // namespace fdc_scheduler

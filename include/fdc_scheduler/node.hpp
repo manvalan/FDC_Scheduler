@@ -10,7 +10,7 @@
 #include <optional>
 #include <nlohmann/json.hpp>
 
-namespace fdc {
+namespace fdc_scheduler {
 
 /**
  * @brief Represents a time slot for platform reservation
@@ -157,6 +157,6 @@ void to_json(nlohmann::json& j, const Node& node);
  */
 void from_json(const nlohmann::json& j, Node& node);
 
-} // namespace fdc
+} // namespace fdc_scheduler
 
 #endif // FDC_NODE_HPP

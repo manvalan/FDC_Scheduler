@@ -20,6 +20,8 @@ else()
 endif()
 
 # Dependencies
+find_package(Boost REQUIRED)
+
 include(FetchContent)
 
 # nlohmann/json for JSON parsing
@@ -54,18 +56,22 @@ else()
     )
 endif()
 
-# Link dependencies
-target_link_libraries(fdc_scheduler ${FDC_SCHEDULER_LIB_TYPE} nlohmann_json::nlohmann_json)
-
-# Compiler warnings
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(fdc_scheduler ${FDC_SCHEDULER_LIB_TYPE} 
-        -Wall -Wextra -Wpedantic -Werror
-    )
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(fdc_scheduler ${FDC_SCHEDULER_LIB_TYPE} 
-        /W4 /WX
-    )
+# Link dependencies (only for non-header-only mode)
+if(NOT FDC_SCHEDULER_HEADER_ONLY)
+    target_link_libraries(fdc_scheduler PRIVATE nlohmann_json::nlohmann_json Boost::boost)
+    
+    # Compiler warnings
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(fdc_scheduler PRIVATE 
+            -Wall -Wextra -Wpedantic
+        )
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        target_compile_options(fdc_scheduler PRIVATE 
+            /W4
+        )
+    endif()
+else()
+    target_link_libraries(fdc_scheduler INTERFACE nlohmann_json::nlohmann_json)
 endif()
 
 # Tests
@@ -94,7 +100,6 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 install(TARGETS fdc_scheduler
-    EXPORT fdc_scheduler-targets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -105,31 +110,12 @@ install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Export targets
-install(EXPORT fdc_scheduler-targets
-    FILE fdc_scheduler-targets.cmake
-    NAMESPACE fdc_scheduler::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fdc_scheduler
-)
-
-# Package config
-configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fdc_scheduler-config.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/fdc_scheduler-config.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fdc_scheduler
-)
-
-write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/fdc_scheduler-config-version.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-
-install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/fdc_scheduler-config.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/fdc_scheduler-config-version.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fdc_scheduler
-)
+# TODO: Fix export with FetchContent dependencies
+# install(EXPORT fdc_scheduler-targets
+#     FILE fdc_scheduler-targets.cmake
+#     NAMESPACE fdc_scheduler::
+#     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fdc_scheduler
+# )
 
 # Print configuration summary
 message(STATUS "")

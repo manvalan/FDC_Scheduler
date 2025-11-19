@@ -1,8 +1,8 @@
-#include "train.hpp"
+#include "fdc_scheduler/train.hpp"
 #include <cmath>
 #include <algorithm>
 
-namespace fdc {
+namespace fdc_scheduler {
 
 Train::Train(std::string id,
              std::string name,
@@ -127,4 +127,4 @@ void from_json(const nlohmann::json& j, Train& train) {
     train = Train(id, name, type, max_speed, acceleration, deceleration);
 }
 
-} // namespace fdc
+} // namespace fdc_scheduler

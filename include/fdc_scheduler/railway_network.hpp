@@ -13,7 +13,7 @@
 #include "edge.hpp"
 #include "train.hpp"
 
-namespace fdc {
+namespace fdc_scheduler {
 
 /**
  * @brief Properties stored on graph vertices (nodes)
@@ -153,6 +153,6 @@ private:
                          Vertex start, Vertex end) const;
 };
 
-} // namespace fdc
+} // namespace fdc_scheduler
 
 #endif // FDC_RAILWAY_NETWORK_HPP

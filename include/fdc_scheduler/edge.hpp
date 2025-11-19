@@ -5,7 +5,7 @@
 #include <string>
 #include <nlohmann/json.hpp>
 
-namespace fdc {
+namespace fdc_scheduler {
 
 /**
  * @brief Represents a railway edge (track connection between nodes)
@@ -92,6 +92,6 @@ void to_json(nlohmann::json& j, const Edge& edge);
  */
 void from_json(const nlohmann::json& j, Edge& edge);
 
-} // namespace fdc
+} // namespace fdc_scheduler
 
 #endif // FDC_EDGE_HPP

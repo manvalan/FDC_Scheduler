@@ -1,11 +1,11 @@
-#include "railway_network.hpp"
+#include "fdc_scheduler/railway_network.hpp"
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/connected_components.hpp>
 
-namespace fdc {
+namespace fdc_scheduler {
 
 // ============================================================================
 // Node Management
@@ -436,4 +436,4 @@ Path RailwayNetwork::reconstruct_path(const std::vector<Vertex>& predecessors,
     return path;
 }
 
-} // namespace fdc
+} // namespace fdc_scheduler

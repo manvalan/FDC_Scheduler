@@ -1,4 +1,4 @@
-#include "schedule.hpp"
+#include "fdc_scheduler/schedule.hpp"
 #include <algorithm>
 #include <stdexcept>
 #include <cmath>
@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <ctime>
 
-namespace fdc {
+namespace fdc_scheduler {
 
 // ============================================================================
 // ScheduleStop Implementation
@@ -715,4 +715,4 @@ std::shared_ptr<TrainSchedule> train_schedule_from_json(
     return schedule;
 }
 
-} // namespace fdc
+} // namespace fdc_scheduler

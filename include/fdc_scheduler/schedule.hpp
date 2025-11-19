@@ -10,7 +10,7 @@
 #include "railway_network.hpp"
 #include "train.hpp"
 
-namespace fdc {
+namespace fdc_scheduler {
 
 /**
  * @brief Rappresenta una singola fermata in un orario ferroviario
@@ -259,6 +259,6 @@ std::shared_ptr<TrainSchedule> train_schedule_from_json(
     const nlohmann::json& j, 
     std::shared_ptr<RailwayNetwork> network);
 
-} // namespace fdc
+} // namespace fdc_scheduler
 
 #endif // FDC_SCHEDULE_HPP

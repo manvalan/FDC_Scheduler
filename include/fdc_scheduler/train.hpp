@@ -5,7 +5,7 @@
 #include <string>
 #include <nlohmann/json.hpp>
 
-namespace fdc {
+namespace fdc_scheduler {
 
 /**
  * @brief Represents a train with physical characteristics
@@ -89,6 +89,6 @@ void to_json(nlohmann::json& j, const Train& train);
  */
 void from_json(const nlohmann::json& j, Train& train);
 
-} // namespace fdc
+} // namespace fdc_scheduler
 
 #endif // FDC_TRAIN_HPP
