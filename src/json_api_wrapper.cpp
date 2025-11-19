@@ -595,14 +595,70 @@ public:
     
     // ========== CONFLICT DETECTION ==========
     
-    // Detect conflicts (stub - da implementare con conflict detector)
+    // Detect conflicts (basic platform/timing detection)
     std::string detect_conflicts() {
-        json response;
-        response["status"] = "success";
-        response["total"] = 0;
-        response["conflicts"] = json::array();
-        response["message"] = "Conflict detection integration pending";
-        return response.dump(2);
+        try {
+            json conflicts_array = json::array();
+            int conflict_count = 0;
+            
+            // Check platform conflicts at each station
+            for (const auto& node : network_->get_all_nodes()) {
+                std::string node_id = node->get_id();
+                int platforms = node->get_platforms();
+                
+                // Group trains by time at this station
+                std::vector<std::tuple<std::string, std::chrono::system_clock::time_point, std::chrono::system_clock::time_point, int>> occupations;
+                
+                for (const auto& [train_id, schedule] : schedules_) {
+                    for (const auto& stop : schedule->get_stops()) {
+                        if (stop.get_node_id() == node_id) {
+                            auto platform = stop.get_platform();
+                            if (platform.has_value()) {
+                                occupations.push_back({train_id, stop.get_arrival(), stop.get_departure(), platform.value()});
+                            }
+                        }
+                    }
+                }
+                
+                // Check for overlaps
+                for (size_t i = 0; i < occupations.size(); i++) {
+                    for (size_t j = i + 1; j < occupations.size(); j++) {
+                        auto [train1, arr1, dep1, plat1] = occupations[i];
+                        auto [train2, arr2, dep2, plat2] = occupations[j];
+                        
+                        // Same platform conflict
+                        if (plat1 == plat2) {
+                            // Check time overlap
+                            if (arr1 < dep2 && arr2 < dep1) {
+                                json conflict;
+                                conflict["type"] = "platform_conflict";
+                                conflict["severity"] = 8;
+                                conflict["train1"] = train1;
+                                conflict["train2"] = train2;
+                                conflict["location"] = node->get_name();
+                                conflict["platform"] = plat1;
+                                conflict["time1"] = time_to_string(arr1) + " - " + time_to_string(dep1);
+                                conflict["time2"] = time_to_string(arr2) + " - " + time_to_string(dep2);
+                                conflict["suggestion"] = "Change platform for one train";
+                                conflicts_array.push_back(conflict);
+                                conflict_count++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            json response;
+            response["status"] = "success";
+            response["total"] = conflict_count;
+            response["conflicts"] = conflicts_array;
+            return response.dump(2);
+        } catch (const std::exception& e) {
+            json response;
+            response["status"] = "error";
+            response["message"] = e.what();
+            return response.dump(2);
+        }
     }
     
     // Validate schedule
@@ -646,6 +702,177 @@ public:
                 response["valid"] = valid;
                 return response.dump(2);
             }
+        } catch (const std::exception& e) {
+            json response;
+            response["status"] = "error";
+            response["message"] = e.what();
+            return response.dump(2);
+        }
+    }
+    
+    // ========== NETWORK ANALYSIS ==========
+    
+    // Analyze network topology
+    std::string analyze_network() {
+        try {
+            json response;
+            response["status"] = "success";
+            
+            // Connectivity analysis
+            bool is_connected = network_->is_connected();
+            response["is_connected"] = is_connected;
+            
+            // Critical nodes (high degree)
+            json critical_nodes = json::array();
+            for (const auto& node : network_->get_all_nodes()) {
+                auto neighbors = network_->get_neighbors(node->get_id());
+                if (neighbors.size() > 2) {
+                    json crit_node;
+                    crit_node["id"] = node->get_id();
+                    crit_node["name"] = node->get_name();
+                    crit_node["degree"] = neighbors.size();
+                    crit_node["type"] = node_type_to_string(node->get_type());
+                    critical_nodes.push_back(crit_node);
+                }
+            }
+            response["critical_nodes"] = critical_nodes;
+            
+            // Bottlenecks (single track sections)
+            json bottlenecks = json::array();
+            for (const auto& edge : network_->get_all_edges()) {
+                if (edge->get_track_type() == TrackType::SINGLE) {
+                    json bottleneck;
+                    bottleneck["from"] = edge->get_from_node();
+                    bottleneck["to"] = edge->get_to_node();
+                    bottleneck["distance"] = edge->get_distance();
+                    bottleneck["max_speed"] = edge->get_max_speed();
+                    bottlenecks.push_back(bottleneck);
+                }
+            }
+            response["single_track_bottlenecks"] = bottlenecks;
+            
+            // Statistics
+            auto stats = network_->get_network_stats();
+            response["avg_degree"] = (double)(stats.num_edges * 2) / stats.num_nodes;
+            response["track_utilization_pct"] = (stats.num_single_track + stats.num_double_track > 0) 
+                ? (double)schedules_.size() / (stats.num_single_track + stats.num_double_track) * 100 
+                : 0.0;
+            
+            return response.dump(2);
+        } catch (const std::exception& e) {
+            json response;
+            response["status"] = "error";
+            response["message"] = e.what();
+            return response.dump(2);
+        }
+    }
+    
+    // ========== SCHEDULE OPTIMIZATION ==========
+    
+    // Auto-assign platforms to minimize conflicts
+    std::string optimize_platforms() {
+        try {
+            int changes = 0;
+            json assignments = json::array();
+            
+            // For each station, assign platforms to avoid conflicts
+            for (const auto& node : network_->get_all_nodes()) {
+                std::string node_id = node->get_id();
+                int num_platforms = node->get_platforms();
+                
+                // Collect all stops at this station
+                std::vector<std::tuple<std::string, size_t, std::chrono::system_clock::time_point, std::chrono::system_clock::time_point>> stops;
+                
+                for (const auto& [train_id, schedule] : schedules_) {
+                    for (size_t i = 0; i < schedule->get_stops().size(); i++) {
+                        const auto& stop = schedule->get_stops()[i];
+                        if (stop.get_node_id() == node_id) {
+                            stops.push_back({train_id, i, stop.get_arrival(), stop.get_departure()});
+                        }
+                    }
+                }
+                
+                // Sort by arrival time
+                std::sort(stops.begin(), stops.end(), [](const auto& a, const auto& b) {
+                    return std::get<2>(a) < std::get<2>(b);
+                });
+                
+                // Assign platforms greedily
+                std::vector<std::chrono::system_clock::time_point> platform_free(num_platforms, std::chrono::system_clock::time_point::min());
+                
+                for (const auto& [train_id, stop_idx, arr, dep] : stops) {
+                    // Find first available platform
+                    int best_platform = -1;
+                    for (int p = 0; p < num_platforms; p++) {
+                        if (platform_free[p] <= arr) {
+                            best_platform = p + 1; // 1-indexed
+                            platform_free[p] = dep;
+                            break;
+                        }
+                    }
+                    
+                    if (best_platform > 0) {
+                        // Update schedule
+                        auto& schedule = schedules_[train_id];
+                        auto& mutable_stop = const_cast<ScheduleStop&>(schedule->get_stops()[stop_idx]);
+                        auto old_platform = mutable_stop.get_platform();
+                        
+                        if (!old_platform.has_value() || old_platform.value() != best_platform) {
+                            mutable_stop.set_platform(best_platform);
+                            changes++;
+                            
+                            json assignment;
+                            assignment["train"] = train_id;
+                            assignment["station"] = node->get_name();
+                            assignment["old_platform"] = old_platform.has_value() ? old_platform.value() : 0;
+                            assignment["new_platform"] = best_platform;
+                            assignments.push_back(assignment);
+                        }
+                    }
+                }
+            }
+            
+            json response;
+            response["status"] = "success";
+            response["changes"] = changes;
+            response["assignments"] = assignments;
+            response["message"] = changes > 0 ? "Platforms optimized" : "No changes needed";
+            return response.dump(2);
+        } catch (const std::exception& e) {
+            json response;
+            response["status"] = "error";
+            response["message"] = e.what();
+            return response.dump(2);
+        }
+    }
+    
+    // Calculate schedule quality metrics
+    std::string get_schedule_metrics() {
+        try {
+            json response;
+            response["status"] = "success";
+            
+            // Basic counts
+            response["total_trains"] = schedules_.size();
+            
+            int total_stops = 0;
+            double total_distance = 0.0;
+            std::chrono::seconds total_duration(0);
+            
+            for (const auto& [id, schedule] : schedules_) {
+                total_stops += schedule->get_stops().size();
+                total_distance += schedule->get_total_distance();
+                total_duration += schedule->get_total_duration();
+            }
+            
+            response["total_stops"] = total_stops;
+            response["avg_stops_per_train"] = schedules_.size() > 0 ? (double)total_stops / schedules_.size() : 0.0;
+            response["total_distance_km"] = total_distance;
+            response["avg_distance_per_train_km"] = schedules_.size() > 0 ? total_distance / schedules_.size() : 0.0;
+            response["total_duration_hours"] = total_duration.count() / 3600.0;
+            response["avg_duration_per_train_hours"] = schedules_.size() > 0 ? (total_duration.count() / 3600.0) / schedules_.size() : 0.0;
+            
+            return response.dump(2);
         } catch (const std::exception& e) {
             json response;
             response["status"] = "error";
@@ -774,6 +1001,24 @@ extern "C" {
         static std::string result;
         std::string ver = version ? version : "3.0";
         result = static_cast<fdc_scheduler::JsonApiWrapper*>(api)->export_railml(path, ver);
+        return result.c_str();
+    }
+    
+    const char* fdc_scheduler_analyze_network(void* api) {
+        static std::string result;
+        result = static_cast<fdc_scheduler::JsonApiWrapper*>(api)->analyze_network();
+        return result.c_str();
+    }
+    
+    const char* fdc_scheduler_optimize_platforms(void* api) {
+        static std::string result;
+        result = static_cast<fdc_scheduler::JsonApiWrapper*>(api)->optimize_platforms();
+        return result.c_str();
+    }
+    
+    const char* fdc_scheduler_get_schedule_metrics(void* api) {
+        static std::string result;
+        result = static_cast<fdc_scheduler::JsonApiWrapper*>(api)->get_schedule_metrics();
         return result.c_str();
     }
 }
