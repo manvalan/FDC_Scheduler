@@ -111,6 +111,29 @@ public:
     bool has_node(const std::string& node_id) const;
     size_t num_nodes() const;
     
+    /**
+     * @brief Get all nodes in the network (wrapper for Boost Graph)
+     * @return Vector of shared pointers to all nodes
+     */
+    std::vector<std::shared_ptr<Node>> get_nodes() const;
+    
+    /**
+     * @brief Get all edges in the network (wrapper for Boost Graph)
+     * @return Vector of shared pointers to all edges
+     */
+    std::vector<std::shared_ptr<Edge>> get_edges() const;
+    
+    /**
+     * @brief Calculate total network length
+     * @return Total length in kilometers
+     */
+    double get_total_length() const;
+    
+    /**
+     * @brief Get all nodes in the network (wrapper for Boost Graph)
+     * @return Vector of shared pointers to all nodes
+     */
+    
     // Edge management
     bool add_edge(const Edge& edge);
     bool remove_edge(const std::string& from_node, const std::string& to_node);

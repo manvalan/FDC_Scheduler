@@ -437,3 +437,38 @@ Path RailwayNetwork::reconstruct_path(const std::vector<Vertex>& predecessors,
 }
 
 } // namespace fdc_scheduler
+
+
+// Wrapper methods for easier API access
+namespace fdc_scheduler {
+
+std::vector<std::shared_ptr<Node>> RailwayNetwork::get_nodes() const {
+    std::vector<std::shared_ptr<Node>> nodes;
+    auto vertex_range = boost::vertices(graph_);
+    for (auto it = vertex_range.first; it != vertex_range.second; ++it) {
+        nodes.push_back(graph_[*it].node);
+    }
+    return nodes;
+}
+
+std::vector<std::shared_ptr<Edge>> RailwayNetwork::get_edges() const {
+    std::vector<std::shared_ptr<Edge>> edges;
+    auto edge_range = boost::edges(graph_);
+    for (auto it = edge_range.first; it != edge_range.second; ++it) {
+        edges.push_back(graph_[*it].edge);
+    }
+    return edges;
+}
+
+double RailwayNetwork::get_total_length() const {
+    double total = 0.0;
+    auto edge_range = boost::edges(graph_);
+    for (auto it = edge_range.first; it != edge_range.second; ++it) {
+        if (graph_[*it].edge) {
+            total += graph_[*it].edge->get_distance();
+        }
+    }
+    return total;
+}
+
+} // namespace fdc_scheduler

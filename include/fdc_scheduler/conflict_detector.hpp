@@ -175,30 +175,6 @@ private:
         const std::shared_ptr<TrainSchedule>& train2);
 
     // Helper methods for pair-wise conflict checking
-    std::vector<Conflict> check_section_conflicts(
-        const std::shared_ptr<TrainSchedule>& train1,
-        const std::shared_ptr<TrainSchedule>& train2);
-    
-    std::vector<Conflict> check_platform_conflicts(
-        const std::shared_ptr<TrainSchedule>& train1,
-        const std::shared_ptr<TrainSchedule>& train2);
-    
-    std::vector<Conflict> check_head_on_collision(
-        const std::shared_ptr<TrainSchedule>& train1,
-        const std::shared_ptr<TrainSchedule>& train2);
-
-    // Helper methods for pair-wise conflict checking
-    std::vector<Conflict> check_section_conflicts(
-        const std::shared_ptr<TrainSchedule>& train1,
-        const std::shared_ptr<TrainSchedule>& train2);
-    
-    std::vector<Conflict> check_platform_conflicts(
-        const std::shared_ptr<TrainSchedule>& train1,
-        const std::shared_ptr<TrainSchedule>& train2);
-    
-    std::vector<Conflict> check_head_on_collision(
-        const std::shared_ptr<TrainSchedule>& train1,
-        const std::shared_ptr<TrainSchedule>& train2);
 
     bool time_windows_overlap(
         std::chrono::system_clock::time_point start1,

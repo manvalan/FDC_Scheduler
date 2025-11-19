@@ -44,20 +44,15 @@ std::vector<Conflict> ConflictDetector::detect_all(
     for (const auto& conflict : all_conflicts) {
         switch (conflict.type) {
             case ConflictType::SECTION_OVERLAP:
-                stats_["section_conflicts"]++;
                 break;
             case ConflictType::PLATFORM_CONFLICT:
-                stats_["platform_conflicts"]++;
                 break;
             case ConflictType::HEAD_ON_COLLISION:
-                stats_["head_on_collisions"]++;
                 break;
             case ConflictType::TIMING_VIOLATION:
-                stats_["timing_violations"]++;
                 break;
         }
     }
-    stats_["total_checks"]++;
     
     return all_conflicts;
 }
@@ -137,8 +132,8 @@ std::vector<Conflict> ConflictDetector::check_section_conflicts(
             const auto& to2 = stops2[j + 1];
             
             // Check if same section
-            if ((from1.node_id == from2.node_id && to1.node_id == to2.node_id) ||
-                (from1.node_id == to2.node_id && to1.node_id == from2.node_id)) {
+            if ((from1.get_node_id() == from2.get_node_id() && to1.get_node_id() == to2.get_node_id()) ||
+                (from1.get_node_id() == to2.get_node_id() && to1.get_node_id() == from2.get_node_id())) {
                 
                 // Calculate time windows with buffer
                 auto start1 = from1.departure;
@@ -152,9 +147,9 @@ std::vector<Conflict> ConflictDetector::check_section_conflicts(
                     conflict.type = ConflictType::SECTION_OVERLAP;
                     conflict.train1_id = train1->get_train_id();
                     conflict.train2_id = train2->get_train_id();
-                    conflict.location = from1.node_id + " → " + to1.node_id;
-                    conflict.section_from = from1.node_id;
-                    conflict.section_to = to1.node_id;
+                    conflict.location = from1.get_node_id() + " → " + to1.get_node_id();
+                    conflict.section_from = from1.get_node_id();
+                    conflict.section_to = to1.get_node_id();
                     conflict.conflict_time = std::max(start1, start2);
                     conflict.description = "Trains on same section with insufficient buffer time";
                     conflict.severity = calculate_severity(start1, end1, start2, end2);
@@ -199,7 +194,7 @@ std::vector<Conflict> ConflictDetector::check_platform_conflicts(
     for (const auto& stop1 : stops1) {
         for (const auto& stop2 : stops2) {
             // Same station and same platform
-            if (stop1.node_id == stop2.node_id && 
+            if (stop1.get_node_id() == stop2.get_node_id() && 
                 stop1.platform == stop2.platform &&
                 stop1.platform > 0) {
                 
@@ -215,10 +210,10 @@ std::vector<Conflict> ConflictDetector::check_platform_conflicts(
                     conflict.type = ConflictType::PLATFORM_CONFLICT;
                     conflict.train1_id = train1->get_train_id();
                     conflict.train2_id = train2->get_train_id();
-                    conflict.location = stop1.node_id;
+                    conflict.location = stop1.get_node_id();
                     conflict.platform = stop1.platform;
                     conflict.conflict_time = std::max(start1, start2);
-                    conflict.description = "Platform conflict at " + stop1.node_id + 
+                    conflict.description = "Platform conflict at " + stop1.get_node_id() + 
                                          ", platform " + std::to_string(stop1.platform);
                     conflict.severity = calculate_severity(start1, end1, start2, end2);
                     
@@ -266,10 +261,10 @@ std::vector<Conflict> ConflictDetector::check_head_on_collision(
             const auto& to2 = stops2[j + 1];
             
             // Check if opposite directions on same section
-            if (from1.node_id == to2.node_id && to1.node_id == from2.node_id) {
+            if (from1.get_node_id() == to2.get_node_id() && to1.get_node_id() == from2.get_node_id()) {
                 
                 // Get edge to check if single track
-                auto edge = network_.get_edge(from1.node_id, to1.node_id);
+                auto edge = network_.get_edge(from1.get_node_id(), to1.get_node_id());
                 if (edge && edge->get_track_type() == "single") {
                     
                     auto start1 = from1.departure;
@@ -283,9 +278,9 @@ std::vector<Conflict> ConflictDetector::check_head_on_collision(
                         conflict.type = ConflictType::HEAD_ON_COLLISION;
                         conflict.train1_id = train1->get_train_id();
                         conflict.train2_id = train2->get_train_id();
-                        conflict.location = from1.node_id + " ↔ " + to1.node_id;
-                        conflict.section_from = from1.node_id;
-                        conflict.section_to = to1.node_id;
+                        conflict.location = from1.get_node_id() + " ↔ " + to1.get_node_id();
+                        conflict.section_from = from1.get_node_id();
+                        conflict.section_to = to1.get_node_id();
                         conflict.conflict_time = std::max(start1, start2);
                         conflict.description = "Head-on collision risk on single track section";
                         conflict.severity = 10; // Maximum severity
@@ -319,7 +314,7 @@ std::vector<Conflict> ConflictDetector::validate_timing(
                 Conflict violation;
                 violation.type = ConflictType::TIMING_VIOLATION;
                 violation.train1_id = schedule->get_train_id();
-                violation.location = stop.node_id;
+                violation.location = stop.get_node_id();
                 violation.conflict_time = stop.arrival;
                 violation.description = "Insufficient dwell time: " + 
                                       std::to_string(dwell_time) + " seconds";
@@ -335,7 +330,7 @@ std::vector<Conflict> ConflictDetector::validate_timing(
                     stop.arrival - prev_stop.departure).count();
                 
                 // Get edge distance
-                auto edge = network_.get_edge(prev_stop.node_id, stop.node_id);
+                auto edge = network_.get_edge(prev_stop.get_node_id(), stop.get_node_id());
                 if (edge) {
                     double distance = edge->get_distance();
                     double max_speed = edge->get_max_speed();
@@ -347,9 +342,9 @@ std::vector<Conflict> ConflictDetector::validate_timing(
                         Conflict violation;
                         violation.type = ConflictType::TIMING_VIOLATION;
                         violation.train1_id = schedule->get_train_id();
-                        violation.location = prev_stop.node_id + " → " + stop.node_id;
-                        violation.section_from = prev_stop.node_id;
-                        violation.section_to = stop.node_id;
+                        violation.location = prev_stop.get_node_id() + " → " + stop.get_node_id();
+                        violation.section_from = prev_stop.get_node_id();
+                        violation.section_to = stop.get_node_id();
                         violation.conflict_time = prev_stop.departure;
                         violation.description = "Unrealistic travel time: " + 
                                               std::to_string(travel_time) + " minutes for " +
