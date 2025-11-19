@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Find dependencies
+find_dependency(nlohmann_json 3.11.0 REQUIRED)
+
+# Include targets
+if(NOT TARGET fdc_scheduler::fdc_scheduler)
+    include("${CMAKE_CURRENT_LIST_DIR}/fdc_scheduler-targets.cmake")
+endif()
+
+check_required_components(fdc_scheduler)
