@@ -532,6 +532,67 @@ public:
         }
     }
     
+    // Find k shortest paths (alternative routes)
+    std::string find_k_shortest_paths(const std::string& from, const std::string& to, int k, bool use_distance = true) {
+        try {
+            if (k < 1 || k > 10) {
+                json response;
+                response["status"] = "error";
+                response["message"] = "k must be between 1 and 10";
+                return response.dump(2);
+            }
+            
+            auto paths = network_->find_k_shortest_paths(from, to, k, use_distance);
+            
+            if (paths.empty()) {
+                json response;
+                response["status"] = "error";
+                response["message"] = "No paths found between " + from + " and " + to;
+                return response.dump(2);
+            }
+            
+            json response;
+            response["status"] = "success";
+            response["from"] = from;
+            response["to"] = to;
+            response["requested"] = k;
+            response["found"] = paths.size();
+            response["metric"] = use_distance ? "distance" : "time";
+            
+            json paths_array = json::array();
+            int rank = 1;
+            for (const auto& path : paths) {
+                json path_json;
+                path_json["rank"] = rank++;
+                path_json["nodes"] = path.nodes;
+                path_json["edges"] = path.edges;
+                path_json["total_distance_km"] = path.total_distance;
+                path_json["min_travel_time_hours"] = path.min_travel_time;
+                path_json["num_nodes"] = path.nodes.size();
+                
+                // Calculate difference from shortest
+                if (rank == 2) {
+                    path_json["delta_distance_km"] = 0.0;
+                    path_json["delta_time_hours"] = 0.0;
+                } else {
+                    path_json["delta_distance_km"] = path.total_distance - paths[0].total_distance;
+                    path_json["delta_time_hours"] = path.min_travel_time - paths[0].min_travel_time;
+                }
+                
+                paths_array.push_back(path_json);
+            }
+            
+            response["paths"] = paths_array;
+            
+            return response.dump(2);
+        } catch (const std::exception& e) {
+            json response;
+            response["status"] = "error";
+            response["message"] = e.what();
+            return response.dump(2);
+        }
+    }
+    
     // ========== CONFLICT DETECTION ==========
     
     // Detect conflicts (stub - da implementare con conflict detector)
@@ -687,6 +748,12 @@ extern "C" {
     const char* fdc_scheduler_find_shortest_path(void* api, const char* from, const char* to) {
         static std::string result;
         result = static_cast<fdc_scheduler::JsonApiWrapper*>(api)->find_shortest_path(from, to);
+        return result.c_str();
+    }
+    
+    const char* fdc_scheduler_find_k_shortest_paths(void* api, const char* from, const char* to, int k, int use_distance) {
+        static std::string result;
+        result = static_cast<fdc_scheduler::JsonApiWrapper*>(api)->find_k_shortest_paths(from, to, k, use_distance != 0);
         return result.c_str();
     }
     
