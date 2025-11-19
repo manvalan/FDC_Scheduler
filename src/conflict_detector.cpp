@@ -147,7 +147,7 @@ std::vector<Conflict> ConflictDetector::check_section_conflicts(
                 auto end2 = to2.arrival;
                 
                 if (time_windows_overlap(start1, end1, start2, end2, 
-                                        std::chrono::seconds(config_.section_buffer_seconds))) {
+                                        config_.section_buffer_seconds)) {
                     Conflict conflict;
                     conflict.type = ConflictType::SECTION_OVERLAP;
                     conflict.train1_id = train1->get_train_id();
@@ -210,7 +210,7 @@ std::vector<Conflict> ConflictDetector::check_platform_conflicts(
                 auto end2 = stop2.departure;
                 
                 if (time_windows_overlap(start1, end1, start2, end2,
-                                        std::chrono::seconds(config_.platform_buffer_seconds))) {
+                                        config_.platform_buffer_seconds)) {
                     Conflict conflict;
                     conflict.type = ConflictType::PLATFORM_CONFLICT;
                     conflict.train1_id = train1->get_train_id();
@@ -278,7 +278,7 @@ std::vector<Conflict> ConflictDetector::check_head_on_collision(
                     auto end2 = to2.arrival;
                     
                     if (time_windows_overlap(start1, end1, start2, end2,
-                                            std::chrono::seconds(config_.head_on_buffer_seconds))) {
+                                            config_.head_on_buffer_seconds)) {
                         Conflict conflict;
                         conflict.type = ConflictType::HEAD_ON_COLLISION;
                         conflict.train1_id = train1->get_train_id();
@@ -371,13 +371,13 @@ bool ConflictDetector::time_windows_overlap(
     std::chrono::system_clock::time_point end1,
     std::chrono::system_clock::time_point start2,
     std::chrono::system_clock::time_point end2,
-    std::chrono::seconds buffer) {
+    int buffer_seconds) {
     
     // Add buffer to both windows
-    start1 -= buffer;
-    end1 += buffer;
-    start2 -= buffer;
-    end2 += buffer;
+    start1 -= std::chrono::seconds(buffer_seconds);
+    end1 += std::chrono::seconds(buffer_seconds);
+    start2 -= std::chrono::seconds(buffer_seconds);
+    end2 += std::chrono::seconds(buffer_seconds);
     
     // Check overlap: windows overlap if start of one is before end of other
     return !(end1 < start2 || end2 < start1);

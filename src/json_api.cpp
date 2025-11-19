@@ -65,7 +65,7 @@ std::string JsonApi::load_network(const std::string& path) {
                     edge->set_bidirectional(edge_data["bidirectional"].get<bool>());
                 }
                 
-                network_->add_edge(edge);
+                network_->add_edge(*edge);
             }
         }
         
@@ -215,7 +215,7 @@ std::string JsonApi::add_track_section(const std::string& edge_json) {
             edge->set_bidirectional(j["bidirectional"].get<bool>());
         }
         
-        network_->add_edge(edge);
+        network_->add_edge(*edge);
         
         json response;
         response["success"] = true;

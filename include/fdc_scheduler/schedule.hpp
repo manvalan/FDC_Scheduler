@@ -259,6 +259,12 @@ std::shared_ptr<TrainSchedule> train_schedule_from_json(
     const nlohmann::json& j, 
     std::shared_ptr<RailwayNetwork> network);
 
+
+// Alias for backward compatibility
+using TrainStop = ScheduleStop;
+
 } // namespace fdc_scheduler
 
 #endif // FDC_SCHEDULE_HPP
+
+

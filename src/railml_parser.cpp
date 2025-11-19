@@ -51,21 +51,9 @@ bool RailMLParser::parse_string(const std::string& xml_content, RailMLVersion ve
     }
 }
 
-std::shared_ptr<RailwayNetwork> RailMLParser::get_network() const {
-    return network_;
-}
 
-const std::vector<std::shared_ptr<TrainSchedule>>& RailMLParser::get_schedules() const {
-    return schedules_;
-}
 
-std::string RailMLParser::get_last_error() const {
-    return last_error_;
-}
 
-std::map<std::string, int> RailMLParser::get_statistics() const {
-    return statistics_;
-}
 
 RailMLVersion RailMLParser::detect_version(const std::string& xml_content) {
     // Simple version detection based on XML namespace

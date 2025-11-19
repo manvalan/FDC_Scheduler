@@ -60,9 +60,6 @@ std::string RailMLExporter::export_to_string(
     }
 }
 
-std::string RailMLExporter::get_last_error() const {
-    return last_error_;
-}
 
 std::map<std::string, int> RailMLExporter::get_statistics() const {
     return statistics_;
