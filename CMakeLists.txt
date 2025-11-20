@@ -100,6 +100,9 @@ set(SCHEDULER_SOURCES
     # Import/Export
     src/railml_parser.cpp
     src/railml_exporter.cpp
+    
+    # Optimization
+    src/route_optimizer.cpp
 )
 
 # Create library (static by default, shared if option enabled)
