@@ -48,6 +48,44 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(pugixml)
 
+# SQLite3 for database persistence
+# Try to find system SQLite3 first
+find_package(SQLite3)
+
+if(NOT SQLite3_FOUND)
+    # Download and build SQLite3 amalgamation
+    message(STATUS "System SQLite3 not found, downloading amalgamation...")
+    FetchContent_Declare(
+        sqlite3_src
+        URL https://www.sqlite.org/2024/sqlite-amalgamation-3450100.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(sqlite3_src)
+    
+    # Create SQLite3 library from amalgamation
+    add_library(sqlite3 STATIC ${sqlite3_src_SOURCE_DIR}/sqlite3.c)
+    target_include_directories(sqlite3 PUBLIC ${sqlite3_src_SOURCE_DIR})
+    target_compile_definitions(sqlite3 PUBLIC 
+        SQLITE_ENABLE_COLUMN_METADATA
+        SQLITE_ENABLE_EXPLAIN_COMMENTS
+        SQLITE_ENABLE_FTS5
+        SQLITE_ENABLE_JSON1
+        SQLITE_ENABLE_RTREE
+    )
+    # Ensure C language is used
+    set_source_files_properties(${sqlite3_src_SOURCE_DIR}/sqlite3.c PROPERTIES LANGUAGE C)
+    
+    # Platform-specific settings
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(sqlite3 PUBLIC pthread dl m)
+    elseif(APPLE)
+        target_link_libraries(sqlite3 PUBLIC pthread)
+    endif()
+    
+    # Create alias for consistency
+    add_library(SQLite::SQLite3 ALIAS sqlite3)
+endif()
+
 # pybind11 for Python bindings (only if Python bindings enabled)
 if(FDC_SCHEDULER_BUILD_PYTHON)
     FetchContent_Declare(
@@ -114,6 +152,9 @@ set(SCHEDULER_SOURCES
     
     # Logging Framework
     src/logger.cpp
+    
+    # Database Persistence
+    src/database.cpp
 )
 
 # Create library (static by default, shared if option enabled)
@@ -133,6 +174,7 @@ target_link_libraries(fdc_scheduler
         nlohmann_json::nlohmann_json
         Boost::graph
         pugixml::pugixml
+        $<IF:$<TARGET_EXISTS:SQLite::SQLite3>,SQLite::SQLite3,sqlite3>
 )
 
 # Include directories
