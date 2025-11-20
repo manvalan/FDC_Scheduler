@@ -25,7 +25,7 @@ static std::chrono::system_clock::time_point parse_time(const std::string& time_
 }
 
 JsonApi::JsonApi() 
-    : network_(std::make_shared<RailwayNetwork>()) {
+    : network_(std::make_unique<RailwayNetwork>()) {
 }
 
 JsonApi::~JsonApi() = default;
@@ -140,31 +140,7 @@ std::string JsonApi::get_config() {
     return response.dump(2);
 }
 
-std::string JsonApi::update_config(const std::string& config_json) {
-    json response;
-    response["status"] = "error";
-    response["message"] = "Not implemented yet";
-    return response.dump(2);
-}
-
 // Private helper methods
-nlohmann::json JsonApi::node_to_json(const Node& node) const {
-    json j;
-    j["id"] = node.get_id();
-    j["name"] = node.get_name();
-    j["type"] = static_cast<int>(node.get_type());
-    return j;
-}
-
-nlohmann::json JsonApi::edge_to_json(const Edge& edge) const {
-    json j;
-    j["from"] = edge.get_from_id();
-    j["to"] = edge.get_to_id();
-    j["distance"] = edge.get_distance();
-    j["track_type"] = track_type_to_string(edge.get_track_type());
-    return j;
-}
-
 nlohmann::json JsonApi::schedule_to_json(const TrainSchedule& schedule) const {
     json j;
     j["train_id"] = schedule.get_train_id();

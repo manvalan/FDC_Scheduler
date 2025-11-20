@@ -21,12 +21,20 @@ namespace fdc_scheduler {
  * - Calcolo tempo di sosta
  */
 class ScheduleStop {
+public:
+    // Public members for direct access (compatibility)
+    std::string node_id;                           // ID della stazione
+    std::chrono::system_clock::time_point arrival;  // Orario di arrivo
+    std::chrono::system_clock::time_point departure; // Orario di partenza
+    int platform;                                   // Binario assegnato (-1 = non assegnato)
+    bool is_stop;                                   // true = fermata, false = transito
+
 private:
-    std::string node_id_;                           // ID della stazione
-    std::chrono::system_clock::time_point arrival_;  // Orario di arrivo
-    std::chrono::system_clock::time_point departure_; // Orario di partenza
-    std::optional<int> platform_;                    // Binario assegnato (optional)
-    bool is_stop_;                                  // true = fermata, false = transito
+    std::string node_id_;                           // ID della stazione (deprecato)
+    std::chrono::system_clock::time_point arrival_;  // Orario di arrivo (deprecato)
+    std::chrono::system_clock::time_point departure_; // Orario di partenza (deprecato)
+    std::optional<int> platform_;                    // Binario assegnato (deprecato)
+    bool is_stop_;                                  // true = fermata, false = transito (deprecato)
 
 public:
     // Costruttori
@@ -37,11 +45,11 @@ public:
                  bool is_stop = true);
 
     // Getters
-    std::string get_node_id() const { return node_id_; }
-    std::chrono::system_clock::time_point get_arrival() const { return arrival_; }
-    std::chrono::system_clock::time_point get_departure() const { return departure_; }
-    std::optional<int> get_platform() const { return platform_; }
-    bool is_stop() const { return is_stop_; }
+    std::string get_node_id() const { return node_id; }
+    std::chrono::system_clock::time_point get_arrival() const { return arrival; }
+    std::chrono::system_clock::time_point get_departure() const { return departure; }
+    std::optional<int> get_platform() const { return platform > 0 ? std::optional<int>(platform) : std::nullopt; }
+    bool get_is_stop() const { return is_stop; }
 
     // Setters
     void set_node_id(const std::string& node_id) { node_id_ = node_id; }
@@ -80,6 +88,7 @@ private:
 public:
     // Costruttori
     TrainSchedule();
+    explicit TrainSchedule(const std::string& train_id);
     TrainSchedule(const std::string& train_id,
                   const std::string& schedule_id,
                   std::shared_ptr<RailwayNetwork> network);
@@ -88,6 +97,7 @@ public:
     std::string get_train_id() const { return train_id_; }
     std::string get_schedule_id() const { return schedule_id_; }
     const std::vector<ScheduleStop>& get_stops() const { return stops_; }
+    std::vector<ScheduleStop>& get_stops() { return stops_; }  // Non-const version
     size_t get_stop_count() const { return stops_.size(); }
     std::shared_ptr<RailwayNetwork> get_network() const { return network_; }
 

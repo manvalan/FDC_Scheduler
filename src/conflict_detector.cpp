@@ -152,7 +152,13 @@ std::vector<Conflict> ConflictDetector::check_section_conflicts(
                     conflict.section_to = to1.get_node_id();
                     conflict.conflict_time = std::max(start1, start2);
                     conflict.description = "Trains on same section with insufficient buffer time";
-                    conflict.severity = calculate_severity(start1, end1, start2, end2);
+                    
+                    // Calculate severity based on overlap
+                    auto overlap_start = std::max(start1, start2);
+                    auto overlap_end = std::min(end1, end2);
+                    auto overlap_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+                        overlap_end - overlap_start).count();
+                    conflict.severity = std::min(10, static_cast<int>(overlap_seconds / 60) + 1);
                     
                     conflicts.push_back(conflict);
                 }
@@ -215,7 +221,13 @@ std::vector<Conflict> ConflictDetector::check_platform_conflicts(
                     conflict.conflict_time = std::max(start1, start2);
                     conflict.description = "Platform conflict at " + stop1.get_node_id() + 
                                          ", platform " + std::to_string(stop1.platform);
-                    conflict.severity = calculate_severity(start1, end1, start2, end2);
+                    
+                    // Calculate severity based on overlap
+                    auto overlap_start = std::max(start1, start2);
+                    auto overlap_end = std::min(end1, end2);
+                    auto overlap_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+                        overlap_end - overlap_start).count();
+                    conflict.severity = std::min(10, static_cast<int>(overlap_seconds / 60) + 1);
                     
                     conflicts.push_back(conflict);
                 }
@@ -265,7 +277,7 @@ std::vector<Conflict> ConflictDetector::check_head_on_collision(
                 
                 // Get edge to check if single track
                 auto edge = network_.get_edge(from1.get_node_id(), to1.get_node_id());
-                if (edge && edge->get_track_type() == "single") {
+                if (edge && edge->get_track_type() == TrackType::SINGLE) {
                     
                     auto start1 = from1.departure;
                     auto end1 = to1.arrival;
@@ -366,7 +378,7 @@ bool ConflictDetector::time_windows_overlap(
     std::chrono::system_clock::time_point end1,
     std::chrono::system_clock::time_point start2,
     std::chrono::system_clock::time_point end2,
-    int buffer_seconds) {
+    int buffer_seconds) const {
     
     // Add buffer to both windows
     start1 -= std::chrono::seconds(buffer_seconds);
@@ -378,46 +390,92 @@ bool ConflictDetector::time_windows_overlap(
     return !(end1 < start2 || end2 < start1);
 }
 
-int ConflictDetector::calculate_severity(
-    std::chrono::system_clock::time_point start1,
-    std::chrono::system_clock::time_point end1,
-    std::chrono::system_clock::time_point start2,
-    std::chrono::system_clock::time_point end2) {
+int ConflictDetector::calculate_severity(const Conflict& conflict) const {
+    // Calculate severity based on conflict type
+    // HEAD_ON_COLLISION and TIMING_VIOLATION are most severe
+    // PLATFORM_CONFLICT and SECTION_OVERLAP severity depends on buffer violation
     
-    // Calculate overlap duration
-    auto overlap_start = std::max(start1, start2);
-    auto overlap_end = std::min(end1, end2);
-    
-    auto overlap_seconds = std::chrono::duration_cast<std::chrono::seconds>(
-        overlap_end - overlap_start).count();
-    
-    // Calculate severity based on overlap duration
-    // 0-60s: severity 1-3
-    // 60-300s: severity 4-6
-    // 300-600s: severity 7-8
-    // >600s: severity 9-10
-    
-    if (overlap_seconds < 60) {
-        return std::min(3, static_cast<int>(overlap_seconds / 20) + 1);
-    } else if (overlap_seconds < 300) {
-        return std::min(6, static_cast<int>((overlap_seconds - 60) / 60) + 4);
-    } else if (overlap_seconds < 600) {
-        return std::min(8, static_cast<int>((overlap_seconds - 300) / 150) + 7);
-    } else {
-        return std::min(10, static_cast<int>((overlap_seconds - 600) / 300) + 9);
+    switch (conflict.type) {
+        case ConflictType::HEAD_ON_COLLISION:
+            return 10;  // Maximum severity
+            
+        case ConflictType::TIMING_VIOLATION:
+            return 8;   // High severity
+            
+        case ConflictType::PLATFORM_CONFLICT:
+            return 6;   // Medium severity
+            
+        case ConflictType::SECTION_OVERLAP:
+            return 5;   // Medium-low severity
+            
+        default:
+            return 3;   // Default severity
     }
 }
 
-const ConflictDetectorConfig& ConflictDetector::get_config() const {
-    return config_;
-}
-
-void ConflictDetector::set_config(const ConflictDetectorConfig& config) {
-    config_ = config;
-}
-
 std::map<std::string, int> ConflictDetector::get_statistics() const {
-    return stats_;
+    return {
+        {"total_checks", total_checks_},
+        {"section_conflicts", section_conflicts_found_},
+        {"platform_conflicts", platform_conflicts_found_},
+        {"head_on_collisions", head_on_collisions_found_},
+        {"timing_violations", timing_violations_found_}
+    };
+}
+
+ConflictDetector::ConflictDetector(const RailwayNetwork& network, const ConflictDetectorConfig& config)
+    : network_(network), config_(config) {}
+
+std::vector<Conflict> ConflictDetector::detect_section_conflicts(
+    const std::shared_ptr<TrainSchedule>& schedule1,
+    const std::shared_ptr<TrainSchedule>& schedule2) {
+    return check_section_conflicts(schedule1, schedule2);
+}
+
+std::vector<Conflict> ConflictDetector::detect_platform_conflicts(
+    const std::shared_ptr<TrainSchedule>& schedule1,
+    const std::shared_ptr<TrainSchedule>& schedule2) {
+    return check_platform_conflicts(schedule1, schedule2);
+}
+
+std::vector<Conflict> ConflictDetector::detect_head_on_collisions(
+    const std::shared_ptr<TrainSchedule>& schedule1,
+    const std::shared_ptr<TrainSchedule>& schedule2) {
+    return check_head_on_collision(schedule1, schedule2);
+}
+
+std::vector<Conflict> ConflictDetector::validate_timing(
+    const std::shared_ptr<TrainSchedule>& schedule) {
+    std::vector<std::shared_ptr<TrainSchedule>> single = {schedule};
+    return validate_timing(single);
+}
+
+std::string conflict_type_to_string(ConflictType type) {
+    switch (type) {
+        case ConflictType::SECTION_OVERLAP:
+            return "SECTION_OVERLAP";
+        case ConflictType::PLATFORM_CONFLICT:
+            return "PLATFORM_CONFLICT";
+        case ConflictType::HEAD_ON_COLLISION:
+            return "HEAD_ON_COLLISION";
+        case ConflictType::TIMING_VIOLATION:
+            return "TIMING_VIOLATION";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+std::string conflict_to_string(const Conflict& conflict) {
+    std::ostringstream oss;
+    oss << "Conflict [" << conflict_type_to_string(conflict.type) << "]\n"
+        << "  Trains: " << conflict.train1_id;
+    if (!conflict.train2_id.empty()) {
+        oss << " <-> " << conflict.train2_id;
+    }
+    oss << "\n  Location: " << conflict.location
+        << "\n  Severity: " << conflict.severity
+        << "\n  Description: " << conflict.description;
+    return oss.str();
 }
 
 } // namespace fdc_scheduler

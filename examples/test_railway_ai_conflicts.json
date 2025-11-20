@@ -1,0 +1,372 @@
+{
+  "network": {
+    "name": "Test Network - RailwayAI Resolution Demo",
+    "description": "Network con scenari di conflitto su binario doppio, singolo e stazioni",
+    "nodes": [
+      {
+        "id": "MILANO",
+        "name": "Milano Centrale",
+        "type": "STATION",
+        "latitude": 45.4868,
+        "longitude": 9.2044,
+        "platforms": 12,
+        "capacity": 24
+      },
+      {
+        "id": "BOLOGNA",
+        "name": "Bologna Centrale",
+        "type": "STATION",
+        "latitude": 44.5058,
+        "longitude": 11.3431,
+        "platforms": 16,
+        "capacity": 32
+      },
+      {
+        "id": "FIRENZE",
+        "name": "Firenze Santa Maria Novella",
+        "type": "STATION",
+        "latitude": 43.7762,
+        "longitude": 11.2480,
+        "platforms": 16,
+        "capacity": 32
+      },
+      {
+        "id": "ROMA",
+        "name": "Roma Termini",
+        "type": "STATION",
+        "latitude": 41.9009,
+        "longitude": 12.5025,
+        "platforms": 24,
+        "capacity": 48
+      },
+      {
+        "id": "NAPOLI",
+        "name": "Napoli Centrale",
+        "type": "STATION",
+        "latitude": 40.8531,
+        "longitude": 14.2726,
+        "platforms": 18,
+        "capacity": 36
+      },
+      {
+        "id": "CASERTA",
+        "name": "Caserta",
+        "type": "STATION",
+        "latitude": 41.0747,
+        "longitude": 14.3322,
+        "platforms": 4,
+        "capacity": 8
+      },
+      {
+        "id": "GENOVA",
+        "name": "Genova Piazza Principe",
+        "type": "STATION",
+        "latitude": 44.4167,
+        "longitude": 8.9167,
+        "platforms": 12,
+        "capacity": 24
+      },
+      {
+        "id": "LA_SPEZIA",
+        "name": "La Spezia Centrale",
+        "type": "STATION",
+        "latitude": 44.1167,
+        "longitude": 9.8333,
+        "platforms": 6,
+        "capacity": 12
+      }
+    ],
+    "edges": [
+      {
+        "from": "MILANO",
+        "to": "BOLOGNA",
+        "distance": 218.0,
+        "track_type": "DOUBLE",
+        "max_speed": 300.0,
+        "capacity": 20,
+        "bidirectional": true
+      },
+      {
+        "from": "BOLOGNA",
+        "to": "FIRENZE",
+        "distance": 78.0,
+        "track_type": "DOUBLE",
+        "max_speed": 300.0,
+        "capacity": 20,
+        "bidirectional": true
+      },
+      {
+        "from": "FIRENZE",
+        "to": "ROMA",
+        "distance": 232.0,
+        "track_type": "DOUBLE",
+        "max_speed": 300.0,
+        "capacity": 20,
+        "bidirectional": true
+      },
+      {
+        "from": "ROMA",
+        "to": "CASERTA",
+        "distance": 166.0,
+        "track_type": "DOUBLE",
+        "max_speed": 250.0,
+        "capacity": 15,
+        "bidirectional": true
+      },
+      {
+        "from": "CASERTA",
+        "to": "NAPOLI",
+        "distance": 36.0,
+        "track_type": "DOUBLE",
+        "max_speed": 200.0,
+        "capacity": 15,
+        "bidirectional": true
+      },
+      {
+        "from": "GENOVA",
+        "to": "LA_SPEZIA",
+        "distance": 93.0,
+        "track_type": "SINGLE",
+        "max_speed": 120.0,
+        "capacity": 1,
+        "bidirectional": true,
+        "comment": "Coastal line - single track with passing loops"
+      }
+    ]
+  },
+  "trains": [
+    {
+      "id": "FR9615",
+      "name": "Frecciarossa 9615",
+      "type": "HIGH_SPEED_PASSENGER",
+      "max_speed": 300.0,
+      "priority": 100,
+      "stops": [
+        {
+          "station": "MILANO",
+          "arrival": "2024-11-20T08:00:00Z",
+          "departure": "2024-11-20T08:00:00Z",
+          "platform": 5,
+          "dwell_time": 0
+        },
+        {
+          "station": "BOLOGNA",
+          "arrival": "2024-11-20T08:45:00Z",
+          "departure": "2024-11-20T08:47:00Z",
+          "platform": 3,
+          "dwell_time": 120
+        },
+        {
+          "station": "FIRENZE",
+          "arrival": "2024-11-20T09:15:00Z",
+          "departure": "2024-11-20T09:15:00Z",
+          "platform": 7,
+          "dwell_time": 0
+        }
+      ]
+    },
+    {
+      "id": "FR9617",
+      "name": "Frecciarossa 9617",
+      "type": "HIGH_SPEED_PASSENGER",
+      "max_speed": 300.0,
+      "priority": 100,
+      "stops": [
+        {
+          "station": "MILANO",
+          "arrival": "2024-11-20T08:05:00Z",
+          "departure": "2024-11-20T08:05:00Z",
+          "platform": 6,
+          "dwell_time": 0,
+          "comment": "TOO CLOSE - will create double track conflict"
+        },
+        {
+          "station": "BOLOGNA",
+          "arrival": "2024-11-20T08:50:00Z",
+          "departure": "2024-11-20T08:52:00Z",
+          "platform": 4,
+          "dwell_time": 120
+        },
+        {
+          "station": "FIRENZE",
+          "arrival": "2024-11-20T09:20:00Z",
+          "departure": "2024-11-20T09:20:00Z",
+          "platform": 8,
+          "dwell_time": 0
+        }
+      ]
+    },
+    {
+      "id": "IC650",
+      "name": "InterCity 650",
+      "type": "INTERCITY_PASSENGER",
+      "max_speed": 200.0,
+      "priority": 80,
+      "stops": [
+        {
+          "station": "ROMA",
+          "arrival": "2024-11-20T14:00:00Z",
+          "departure": "2024-11-20T14:00:00Z",
+          "platform": 12,
+          "dwell_time": 0
+        },
+        {
+          "station": "CASERTA",
+          "arrival": "2024-11-20T14:42:00Z",
+          "departure": "2024-11-20T14:44:00Z",
+          "platform": 2,
+          "dwell_time": 120
+        },
+        {
+          "station": "NAPOLI",
+          "arrival": "2024-11-20T15:05:00Z",
+          "departure": "2024-11-20T15:25:00Z",
+          "platform": 5,
+          "dwell_time": 1200
+        }
+      ]
+    },
+    {
+      "id": "IC608",
+      "name": "InterCity 608",
+      "type": "INTERCITY_PASSENGER",
+      "max_speed": 200.0,
+      "priority": 75,
+      "stops": [
+        {
+          "station": "ROMA",
+          "arrival": "2024-11-20T14:10:00Z",
+          "departure": "2024-11-20T14:10:00Z",
+          "platform": 8,
+          "dwell_time": 0
+        },
+        {
+          "station": "CASERTA",
+          "arrival": "2024-11-20T14:52:00Z",
+          "departure": "2024-11-20T14:54:00Z",
+          "platform": 3,
+          "dwell_time": 120
+        },
+        {
+          "station": "NAPOLI",
+          "arrival": "2024-11-20T15:10:00Z",
+          "departure": "2024-11-20T15:30:00Z",
+          "platform": 5,
+          "dwell_time": 1200,
+          "comment": "PLATFORM CONFLICT with IC650"
+        }
+      ]
+    },
+    {
+      "id": "REG8024",
+      "name": "Regionale 8024",
+      "type": "REGIONAL_PASSENGER",
+      "max_speed": 120.0,
+      "priority": 60,
+      "stops": [
+        {
+          "station": "GENOVA",
+          "arrival": "2024-11-20T10:00:00Z",
+          "departure": "2024-11-20T10:00:00Z",
+          "platform": 7,
+          "dwell_time": 0
+        },
+        {
+          "station": "LA_SPEZIA",
+          "arrival": "2024-11-20T10:50:00Z",
+          "departure": "2024-11-20T10:50:00Z",
+          "platform": 2,
+          "dwell_time": 0
+        }
+      ]
+    },
+    {
+      "id": "REG8025",
+      "name": "Regionale 8025",
+      "type": "REGIONAL_PASSENGER",
+      "max_speed": 120.0,
+      "priority": 60,
+      "stops": [
+        {
+          "station": "LA_SPEZIA",
+          "arrival": "2024-11-20T10:00:00Z",
+          "departure": "2024-11-20T10:00:00Z",
+          "platform": 1,
+          "dwell_time": 0,
+          "comment": "OPPOSITE DIRECTION - single track conflict"
+        },
+        {
+          "station": "GENOVA",
+          "arrival": "2024-11-20T10:50:00Z",
+          "departure": "2024-11-20T10:50:00Z",
+          "platform": 8,
+          "dwell_time": 0
+        }
+      ]
+    }
+  ],
+  "conflicts_expected": [
+    {
+      "type": "SECTION_OVERLAP",
+      "trains": ["FR9615", "FR9617"],
+      "section": "MILANO-BOLOGNA",
+      "track_type": "DOUBLE",
+      "severity": "MEDIUM",
+      "description": "Headway insufficiente su binario doppio - richiede separazione temporale"
+    },
+    {
+      "type": "PLATFORM_CONFLICT",
+      "trains": ["IC650", "IC608"],
+      "station": "NAPOLI",
+      "platform": 5,
+      "severity": "HIGH",
+      "description": "Due treni assegnati alla stessa piattaforma con sovrapposizione temporale"
+    },
+    {
+      "type": "HEAD_ON_COLLISION",
+      "trains": ["REG8024", "REG8025"],
+      "section": "GENOVA-LA_SPEZIA",
+      "track_type": "SINGLE",
+      "severity": "CRITICAL",
+      "description": "Rischio collisione frontale su binario singolo - richiede punto di incrocio"
+    }
+  ],
+  "resolution_config": {
+    "delay_weight": 1.0,
+    "platform_change_weight": 0.5,
+    "reroute_weight": 0.8,
+    "passenger_impact_weight": 1.2,
+    "max_delay_minutes": 30,
+    "min_headway_seconds": 120,
+    "single_track_meet_buffer": 300,
+    "allow_platform_reassignment": true,
+    "optimize_platform_usage": true,
+    "allow_single_track_meets": true
+  },
+  "expected_resolutions": [
+    {
+      "conflict": "FR9615-FR9617 double track",
+      "strategy": "DELAY_TRAIN",
+      "action": "Ritarda FR9617 di 2 minuti per garantire headway minimo",
+      "quality_score": 0.85
+    },
+    {
+      "conflict": "IC650-IC608 platform",
+      "strategy": "CHANGE_PLATFORM",
+      "action": "Riassegna IC608 a piattaforma 8 (disponibile)",
+      "quality_score": 0.92
+    },
+    {
+      "conflict": "REG8024-REG8025 single track",
+      "strategy": "ADD_OVERTAKING_POINT",
+      "action": "Identifica stazione intermedia per incrocio, ritarda treno con priorità minore",
+      "quality_score": 0.75
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "created": "2024-11-20",
+    "author": "FDC_Scheduler RailwayAI Team",
+    "purpose": "Test and demonstration of conflict resolution capabilities"
+  }
+}

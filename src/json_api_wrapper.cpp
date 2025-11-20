@@ -1,12 +1,12 @@
 #include <nlohmann/json.hpp>
-#include "railway_network.hpp"
-#include "schedule.hpp"
-#include "train.hpp"
-#include "node.hpp"
-#include "edge.hpp"
-#include "node_type.hpp"
-#include "track_type.hpp"
-#include "train_type.hpp"
+#include "fdc_scheduler/railway_network.hpp"
+#include "fdc_scheduler/schedule.hpp"
+#include "fdc_scheduler/train.hpp"
+#include "fdc_scheduler/node.hpp"
+#include "fdc_scheduler/edge.hpp"
+#include "fdc_scheduler/node_type.hpp"
+#include "fdc_scheduler/track_type.hpp"
+#include "fdc_scheduler/train_type.hpp"
 #include <memory>
 #include <string>
 #include <fstream>
@@ -15,7 +15,6 @@
 #include <chrono>
 
 using json = nlohmann::json;
-using namespace fdc;
 
 namespace fdc_scheduler {
 

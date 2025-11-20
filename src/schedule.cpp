@@ -13,82 +13,98 @@ namespace fdc_scheduler {
 // ============================================================================
 
 ScheduleStop::ScheduleStop()
-    : node_id_(""),
+    : node_id(""),
+      arrival(std::chrono::system_clock::now()),
+      departure(std::chrono::system_clock::now()),
+      platform(-1),
+      is_stop(true),
+      node_id_(""),
       arrival_(std::chrono::system_clock::now()),
       departure_(std::chrono::system_clock::now()),
       platform_(std::nullopt),
       is_stop_(true) {
 }
 
-ScheduleStop::ScheduleStop(const std::string& node_id,
-                           const std::chrono::system_clock::time_point& arrival,
-                           const std::chrono::system_clock::time_point& departure,
-                           bool is_stop)
-    : node_id_(node_id),
-      arrival_(arrival),
-      departure_(departure),
+ScheduleStop::ScheduleStop(const std::string& node_id_param,
+                           const std::chrono::system_clock::time_point& arrival_param,
+                           const std::chrono::system_clock::time_point& departure_param,
+                           bool is_stop_param)
+    : node_id(node_id_param),
+      arrival(arrival_param),
+      departure(departure_param),
+      platform(-1),
+      is_stop(is_stop_param),
+      node_id_(node_id_param),
+      arrival_(arrival_param),
+      departure_(departure_param),
       platform_(std::nullopt),
-      is_stop_(is_stop) {
+      is_stop_(is_stop_param) {
     
     if (!is_valid()) {
         throw std::invalid_argument("ScheduleStop: departure must be >= arrival");
     }
 }
 
-void ScheduleStop::set_arrival(const std::chrono::system_clock::time_point& arrival) {
-    arrival_ = arrival;
+void ScheduleStop::set_arrival(const std::chrono::system_clock::time_point& arrival_param) {
+    arrival = arrival_param;
+    arrival_ = arrival_param;
     if (!is_valid()) {
         throw std::invalid_argument("ScheduleStop: arrival cannot be after departure");
     }
 }
 
-void ScheduleStop::set_departure(const std::chrono::system_clock::time_point& departure) {
-    departure_ = departure;
+void ScheduleStop::set_departure(const std::chrono::system_clock::time_point& departure_param) {
+    departure = departure_param;
+    departure_ = departure_param;
     if (!is_valid()) {
         throw std::invalid_argument("ScheduleStop: departure must be >= arrival");
     }
 }
 
-void ScheduleStop::set_times(const std::chrono::system_clock::time_point& arrival,
-                              const std::chrono::system_clock::time_point& departure) {
+void ScheduleStop::set_times(const std::chrono::system_clock::time_point& arrival_param,
+                              const std::chrono::system_clock::time_point& departure_param) {
     // Imposta entrambi i tempi SENZA validazione intermedia
-    arrival_ = arrival;
-    departure_ = departure;
+    arrival = arrival_param;
+    departure = departure_param;
+    arrival_ = arrival_param;
+    departure_ = departure_param;
     // Valida SOLO alla fine
     if (!is_valid()) {
         throw std::invalid_argument("ScheduleStop: departure must be >= arrival");
     }
 }
 
-void ScheduleStop::set_platform(int platform) {
-    if (platform < 1) {
+void ScheduleStop::set_platform(int platform_param) {
+    if (platform_param < 1) {
         throw std::invalid_argument("ScheduleStop: platform number must be >= 1");
     }
-    platform_ = platform;
+    platform = platform_param;
+    platform_ = platform_param;
 }
 
 void ScheduleStop::clear_platform() {
+    platform = -1;
     platform_ = std::nullopt;
 }
 
 std::chrono::seconds ScheduleStop::get_dwell_time() const {
-    return std::chrono::duration_cast<std::chrono::seconds>(departure_ - arrival_);
+    return std::chrono::duration_cast<std::chrono::seconds>(departure - arrival);
 }
 
 bool ScheduleStop::is_valid() const {
-    return arrival_ <= departure_;
+    return arrival <= departure;
 }
 
 bool ScheduleStop::operator<(const ScheduleStop& other) const {
-    return arrival_ < other.arrival_;
+    return arrival < other.arrival;
 }
 
 bool ScheduleStop::operator==(const ScheduleStop& other) const {
-    return node_id_ == other.node_id_ &&
-           arrival_ == other.arrival_ &&
-           departure_ == other.departure_ &&
-           platform_ == other.platform_ &&
-           is_stop_ == other.is_stop_;
+    return node_id == other.node_id &&
+           arrival == other.arrival &&
+           departure == other.departure &&
+           platform == other.platform &&
+           is_stop == other.is_stop;
 }
 
 // ============================================================================
@@ -98,6 +114,12 @@ bool ScheduleStop::operator==(const ScheduleStop& other) const {
 TrainSchedule::TrainSchedule()
     : train_id_(""),
       schedule_id_(""),
+      network_(nullptr) {
+}
+
+TrainSchedule::TrainSchedule(const std::string& train_id)
+    : train_id_(train_id),
+      schedule_id_(train_id),
       network_(nullptr) {
 }
 
@@ -661,11 +683,11 @@ void to_json(nlohmann::json& j, const ScheduleStop& stop) {
         {"node_id", stop.get_node_id()},
         {"arrival", time_point_to_iso8601(stop.get_arrival())},
         {"departure", time_point_to_iso8601(stop.get_departure())},
-        {"is_stop", stop.is_stop()}
+        {"is_stop", stop.is_stop}
     };
     
-    if (stop.get_platform().has_value()) {
-        j["platform"] = stop.get_platform().value();
+    if (stop.platform > 0) {
+        j["platform"] = stop.platform;
     } else {
         j["platform"] = nullptr;
     }

@@ -156,8 +156,19 @@ private:
     mutable int timing_violations_found_ = 0;
     
     /**
-     * @brief Check if two time windows overlap with buffer
+     * @brief Internal methods for batch detection
      */
+    std::vector<Conflict> detect_section_conflicts(
+        const std::vector<std::shared_ptr<TrainSchedule>>& schedules);
+    
+    std::vector<Conflict> detect_platform_conflicts(
+        const std::vector<std::shared_ptr<TrainSchedule>>& schedules);
+    
+    std::vector<Conflict> detect_head_on_collisions(
+        const std::vector<std::shared_ptr<TrainSchedule>>& schedules);
+    
+    std::vector<Conflict> validate_timing(
+        const std::vector<std::shared_ptr<TrainSchedule>>& schedules);
     
     /**
      * @brief Helper methods for pair-wise conflict checking
@@ -173,8 +184,6 @@ private:
     std::vector<Conflict> check_head_on_collision(
         const std::shared_ptr<TrainSchedule>& train1,
         const std::shared_ptr<TrainSchedule>& train2);
-
-    // Helper methods for pair-wise conflict checking
 
     bool time_windows_overlap(
         std::chrono::system_clock::time_point start1,

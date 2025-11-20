@@ -1,8 +1,21 @@
 # FDC_Scheduler
 
-**Railway Network Scheduling Library with RailML Compatibility**
+**Complete Standalone Railway Network Scheduling Library**
 
-FDC_Scheduler is a comprehensive C++ library for railway network management, train scheduling, conflict detection, and timetable optimization. Designed for interoperability with the RailML standard and providing JSON API integration.
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/yourusername/FDC_Scheduler)
+[![C++](https://img.shields.io/badge/C++-17-orange.svg)](https://isocpp.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+
+FDC_Scheduler is a **complete and autonomous** C++ library for railway network management, train scheduling, conflict detection, and AI-powered resolution. Version 2.0 includes all core functionality with no external dependencies (except Boost Graph and nlohmann/json).
+
+## ✨ What's New in v2.0
+
+- 🎯 **Standalone library** - no external FDC dependencies
+- 🤖 **RailwayAI integration** - intelligent conflict resolution
+- 🚄 **Complete implementation** - all core features included
+- 📦 **Simple build** - single CMake project
+- 🎨 **Clean API** - modern C++17 interface
 
 ## Features
 
@@ -23,10 +36,14 @@ FDC_Scheduler is a comprehensive C++ library for railway network management, tra
   - Head-on collision detection
   - Time buffer validation (configurable)
 
-- 🤖 **AI Integration Ready**
+- 🤖 **RailwayAI Conflict Resolution**
+  - Automatic resolution of double track conflicts
+  - Single track meet planning and collision avoidance
+  - Intelligent platform reassignment at stations
+  - Priority-based delay distribution
+  - Quality scoring for resolution strategies
   - JSON API for external optimization engines
   - RailwayAI v2.0 compatible
-  - Constraint-based problem formulation
 
 - 📄 **RailML Support**
   - Import/Export RailML 2.x
@@ -43,18 +60,40 @@ FDC_Scheduler is a comprehensive C++ library for railway network management, tra
 
 ### Requirements
 
-- C++17 or later
-- CMake 3.15+
-- nlohmann/json (included via FetchContent)
+**Runtime:**
+- Boost >= 1.70 (Graph library)
+- C++17 compliant compiler (GCC 7.3+, Clang 6.0+, MSVC 2017+)
+
+**Build-time:**
+- CMake >= 3.15
+- nlohmann/json (auto-downloaded via FetchContent)
+
+**No external dependencies from other projects!**
 
 ### Build
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/FDC_Scheduler.git
 cd FDC_Scheduler
+
+# Quick build
+./build.sh
+
+# Or manual
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
+
+# Run demo
+./examples/railway_ai_integration_example
+```
+
+### Install
+
+```bash
+cd build
+sudo make install
+# Installs to /usr/local/lib and /usr/local/include
 ```
 
 ### Basic Usage
@@ -81,7 +120,48 @@ train.add_stop("ROMA", "11:00", "11:00", 5);
 ConflictDetector detector(network);
 auto conflicts = detector.detect_all(schedules);
 
-std::cout << "Found " << conflicts.size() << " conflicts\n";
+// Resolve conflicts with RailwayAI
+if (!conflicts.empty()) {
+    RailwayAIResolver resolver(network);
+    auto result = resolver.resolve_conflicts(schedules, conflicts);
+    
+    std::cout << "Resolved " << conflicts.size() << " conflicts\n";
+    std::cout << "Quality score: " << result.quality_score << "\n";
+}
+```
+
+### RailwayAI Conflict Resolution
+
+```cpp
+#include <fdc_scheduler/railway_ai_resolver.hpp>
+
+// Configure AI resolver
+RailwayAIConfig config;
+config.allow_platform_reassignment = true;
+config.allow_single_track_meets = true;
+config.min_headway_seconds = 120;
+
+RailwayAIResolver resolver(network, config);
+
+// Resolve specific conflict types
+for (const auto& conflict : conflicts) {
+    ResolutionResult result;
+    
+    switch (conflict.type) {
+        case ConflictType::SECTION_OVERLAP:
+            // Handles both double and single track
+            result = resolver.resolve_single_conflict(conflict, schedules);
+            break;
+            
+        case ConflictType::PLATFORM_CONFLICT:
+            // Reassigns platforms or applies delays
+            result = resolver.resolve_station_conflict(conflict, schedules);
+            break;
+    }
+    
+    std::cout << "Strategy: " << strategy_to_string(result.strategy_used) << "\n";
+    std::cout << "Total delay: " << result.total_delay.count() << "s\n";
+}
 ```
 
 ## JSON API
@@ -109,22 +189,40 @@ api.add_train(train_json);
 std::string conflicts_json = api.detect_conflicts();
 ```
 
+## Examples
+
+Run the RailwayAI integration demo:
+
+```bash
+cd build/examples
+./railway_ai_integration_example
+```
+
+This demonstrates:
+- ✅ Double track conflict resolution with headway management
+- ✅ Single track conflict resolution with meeting point planning
+- ✅ Station platform conflict resolution with reassignment
+- ✅ Complex multi-train scenarios with mixed track types
+
 ## Architecture
 
 ```
 fdc_scheduler/
 ├── include/fdc_scheduler/
-│   ├── network.hpp          # Railway network (nodes, edges)
-│   ├── schedule.hpp         # Train schedules and timetables
-│   ├── train.hpp            # Train properties
-│   ├── conflict_detector.hpp # Conflict detection algorithms
-│   ├── railml_parser.hpp    # RailML 2.x/3.x import
-│   ├── railml_exporter.hpp  # RailML 2.x/3.x export
-│   └── json_api.hpp         # JSON REST API interface
-├── src/                     # Implementation files
-├── tests/                   # Unit tests
-├── examples/                # Usage examples
-└── docs/                    # Documentation
+│   ├── railway_network.hpp     # Railway network (nodes, edges)
+│   ├── schedule.hpp            # Train schedules and timetables
+│   ├── train.hpp               # Train properties
+│   ├── conflict_detector.hpp   # Conflict detection algorithms
+│   ├── railway_ai_resolver.hpp # AI-powered conflict resolution
+│   ├── railml_parser.hpp       # RailML 2.x/3.x import
+│   ├── railml_exporter.hpp     # RailML 2.x/3.x export
+│   └── json_api.hpp            # JSON REST API interface
+├── src/                        # Implementation files
+├── tests/                      # Unit tests
+├── examples/                   # Usage examples
+│   └── railway_ai_integration_example.cpp
+└── docs/                       # Documentation
+    └── RAILWAY_AI_RESOLUTION.md
 ```
 
 ## RailML Compatibility
