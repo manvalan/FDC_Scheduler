@@ -16,6 +16,9 @@ FDC_Scheduler is a **complete and autonomous** C++ library for railway network m
 - 🚄 **Complete implementation** - all core features included
 - 📦 **Simple build** - single CMake project
 - 🎨 **Clean API** - modern C++17 interface
+- 🔌 **REST API Server** - HTTP API with JWT authentication
+- ⚙️ **Configuration Management** - JSON/YAML/TOML support
+- 📝 **Logging Framework** - Structured logging with multiple sinks
 
 ## Features
 
@@ -51,7 +54,32 @@ FDC_Scheduler is a **complete and autonomous** C++ library for railway network m
   - Native JSON format
   - XML parsing with pugixml
 
-- � **Python Bindings** (NEW in v2.0!)
+- 🔌 **REST API Server** (NEW in v2.0!)
+  - HTTP REST API framework
+  - JWT-based authentication
+  - Per-client rate limiting
+  - CORS support
+  - OpenAPI specification
+  - Built-in health checks
+
+- ⚙️ **Configuration Management** (NEW in v2.0!)
+  - JSON/YAML/TOML support
+  - Hierarchical configuration
+  - Environment variable overrides
+  - Hot reload capability
+  - Fluent builder API
+  - Configuration merging
+
+- 📝 **Logging Framework** (NEW in v2.0!)
+  - Multiple log levels (TRACE to CRITICAL)
+  - Console output with ANSI colors
+  - File logging with rotation
+  - Daily rotating files
+  - Custom callback sinks
+  - Thread-safe operations
+  - Printf-style formatting
+
+- 🐍 **Python Bindings** (NEW in v2.0!)
   - Complete API available in Python via pybind11
   - Pythonic interface with type hints
   - All C++ features accessible
@@ -235,18 +263,31 @@ std::string conflicts_json = api.detect_conflicts();
 
 ## Examples
 
-Run the RailwayAI integration demo:
+Run the comprehensive demos:
 
 ```bash
 cd build/examples
+
+# RailwayAI integration
 ./railway_ai_integration_example
+
+# REST API server
+./rest_api_demo
+
+# Configuration management
+./config_demo
+
+# Logging framework
+./logging_demo
 ```
 
-This demonstrates:
+Key demonstrations:
 - ✅ Double track conflict resolution with headway management
 - ✅ Single track conflict resolution with meeting point planning
 - ✅ Station platform conflict resolution with reassignment
-- ✅ Complex multi-train scenarios with mixed track types
+- ✅ REST API with JWT authentication and rate limiting
+- ✅ Multi-format configuration (JSON/YAML/TOML)
+- ✅ Structured logging with multiple sinks
 
 ## Architecture
 
@@ -260,11 +301,17 @@ fdc_scheduler/
 │   ├── railway_ai_resolver.hpp # AI-powered conflict resolution
 │   ├── railml_parser.hpp       # RailML 2.x/3.x import
 │   ├── railml_exporter.hpp     # RailML 2.x/3.x export
-│   └── json_api.hpp            # JSON REST API interface
+│   ├── json_api.hpp            # JSON REST API interface
+│   ├── rest_api.hpp            # REST API server framework
+│   ├── config_manager.hpp      # Configuration management
+│   └── logger.hpp              # Logging framework
 ├── src/                        # Implementation files
 ├── tests/                      # Unit tests
 ├── examples/                   # Usage examples
-│   └── railway_ai_integration_example.cpp
+│   ├── railway_ai_integration_example.cpp
+│   ├── rest_api_demo.cpp
+│   ├── config_demo.cpp
+│   └── logging_demo.cpp
 └── docs/                       # Documentation
     └── RAILWAY_AI_RESOLUTION.md
 ```

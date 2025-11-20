@@ -111,6 +111,9 @@ set(SCHEDULER_SOURCES
     
     # Configuration Management
     src/config_manager.cpp
+    
+    # Logging Framework
+    src/logger.cpp
 )
 
 # Create library (static by default, shared if option enabled)
