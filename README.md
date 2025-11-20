@@ -51,7 +51,13 @@ FDC_Scheduler is a **complete and autonomous** C++ library for railway network m
   - Native JSON format
   - XML parsing with pugixml
 
-- 🔧 **Flexible Architecture**
+- � **Python Bindings** (NEW in v2.0!)
+  - Complete API available in Python via pybind11
+  - Pythonic interface with type hints
+  - All C++ features accessible
+  - Easy integration with data science tools
+
+- �🔧 **Flexible Architecture**
   - Header-only option available
   - Modular design
   - No GUI dependencies
@@ -77,13 +83,17 @@ FDC_Scheduler is a **complete and autonomous** C++ library for railway network m
 git clone https://github.com/YOUR_USERNAME/FDC_Scheduler.git
 cd FDC_Scheduler
 
-# Quick build
+# C++ only (quick build)
 ./build.sh
 
 # Or manual
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
+
+# With Python bindings
+cmake -B build -DFDC_SCHEDULER_BUILD_PYTHON=ON
+cmake --build build -j$(nproc)
 
 # Run demo
 ./examples/railway_ai_integration_example
@@ -164,6 +174,39 @@ for (const auto& conflict : conflicts) {
     std::cout << "Total delay: " << result.total_delay.count() << "s\n";
 }
 ```
+
+## Python API
+
+FDC_Scheduler provides complete Python bindings via pybind11:
+
+```python
+import pyfdc_scheduler as fdc
+
+# Create network
+network = fdc.RailwayNetwork()
+network.add_node(fdc.Node("MILANO", "Milano Centrale", fdc.NodeType.STATION))
+network.add_node(fdc.Node("ROMA", "Roma Termini", fdc.NodeType.STATION))
+network.add_edge(fdc.Edge("MILANO", "ROMA", 480.0, fdc.TrackType.HIGH_SPEED))
+
+# Create train
+train = fdc.Train("FR1000", "Frecciarossa", fdc.TrainType.HIGH_SPEED, 300.0)
+
+# Detect conflicts
+detector = fdc.ConflictDetector(network)
+conflicts = detector.detect_all(schedules)
+
+# Resolve with AI
+config = fdc.RailwayAIConfig()
+config.allow_platform_reassignment = True
+config.min_headway_seconds = 120
+
+resolver = fdc.RailwayAIResolver(network, config)
+result = resolver.resolve_conflicts(schedules, conflicts)
+
+print(f"Quality score: {result.quality_score}")
+```
+
+See [`python/README.md`](python/README.md) for full Python API documentation.
 
 ## JSON API
 
