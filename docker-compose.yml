@@ -1,0 +1,202 @@
+# =============================================================================
+# FDC_Scheduler Docker Compose Configuration
+# =============================================================================
+# This file defines multiple service configurations:
+# - fdc_app: Main application container
+# - fdc_dev: Development environment
+# - fdc_api: REST API server
+# =============================================================================
+
+version: '3.8'
+
+# Shared configuration
+x-common-variables: &common-variables
+  FDC_DATA_DIR: /data
+  FDC_LOG_DIR: /logs
+
+x-common-volumes: &common-volumes
+  - ./data:/data
+  - ./logs:/logs
+
+# =============================================================================
+# Services
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Main Application Service (Production)
+  # ---------------------------------------------------------------------------
+  fdc_app:
+    build:
+      context: .
+      target: runtime
+      args:
+        - BUILD_TYPE=Release
+    image: fdc_scheduler:latest
+    container_name: fdc_scheduler_app
+    environment:
+      <<: *common-variables
+      FDC_LOG_LEVEL: INFO
+    volumes: *common-volumes
+    command: ./bin/simple_example
+    restart: unless-stopped
+    networks:
+      - fdc_network
+
+  # ---------------------------------------------------------------------------
+  # REST API Server Service
+  # ---------------------------------------------------------------------------
+  fdc_api:
+    build:
+      context: .
+      target: runtime
+    image: fdc_scheduler:latest
+    container_name: fdc_scheduler_api
+    environment:
+      <<: *common-variables
+      FDC_LOG_LEVEL: DEBUG
+      FDC_API_PORT: 8080
+      FDC_API_HOST: 0.0.0.0
+      FDC_JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+    volumes: *common-volumes
+    command: ./bin/rest_api_demo
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - fdc_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ---------------------------------------------------------------------------
+  # Development Environment
+  # ---------------------------------------------------------------------------
+  fdc_dev:
+    build:
+      context: .
+      target: development
+    image: fdc_scheduler:dev
+    container_name: fdc_scheduler_dev
+    environment:
+      <<: *common-variables
+      FDC_LOG_LEVEL: DEBUG
+    volumes:
+      - .:/workspace
+      - ./data:/data
+      - ./logs:/logs
+      - fdc_build_cache:/workspace/build
+    working_dir: /workspace
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+    networks:
+      - fdc_network
+
+  # ---------------------------------------------------------------------------
+  # Configuration Demo Service
+  # ---------------------------------------------------------------------------
+  fdc_config_demo:
+    build:
+      context: .
+      target: runtime
+    image: fdc_scheduler:latest
+    container_name: fdc_scheduler_config_demo
+    environment:
+      <<: *common-variables
+      FDC_LOG_LEVEL: INFO
+    volumes: *common-volumes
+    command: ./bin/config_demo
+    networks:
+      - fdc_network
+
+  # ---------------------------------------------------------------------------
+  # Logging Demo Service
+  # ---------------------------------------------------------------------------
+  fdc_logging_demo:
+    build:
+      context: .
+      target: runtime
+    image: fdc_scheduler:latest
+    container_name: fdc_scheduler_logging_demo
+    environment:
+      <<: *common-variables
+      FDC_LOG_LEVEL: TRACE
+    volumes: *common-volumes
+    command: ./bin/logging_demo
+    networks:
+      - fdc_network
+
+  # ---------------------------------------------------------------------------
+  # Real-time Optimization Demo
+  # ---------------------------------------------------------------------------
+  fdc_realtime_demo:
+    build:
+      context: .
+      target: runtime
+    image: fdc_scheduler:latest
+    container_name: fdc_scheduler_realtime
+    environment:
+      <<: *common-variables
+      FDC_LOG_LEVEL: INFO
+    volumes: *common-volumes
+    command: ./bin/realtime_demo
+    networks:
+      - fdc_network
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  fdc_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  fdc_build_cache:
+    driver: local
+
+# =============================================================================
+# Usage Examples:
+# =============================================================================
+# Start all services:
+#   docker-compose up
+#
+# Start specific service:
+#   docker-compose up fdc_api
+#
+# Start in detached mode:
+#   docker-compose up -d
+#
+# View logs:
+#   docker-compose logs -f fdc_api
+#
+# Stop all services:
+#   docker-compose down
+#
+# Rebuild and start:
+#   docker-compose up --build
+#
+# Development shell:
+#   docker-compose run --rm fdc_dev
+#
+# Run specific demo:
+#   docker-compose run --rm fdc_logging_demo
+#
+# Scale API servers:
+#   docker-compose up --scale fdc_api=3
+#
+# Remove all containers and volumes:
+#   docker-compose down -v
+#
+# Production deployment with custom JWT:
+#   JWT_SECRET=your-secure-secret docker-compose up -d fdc_api
+# =============================================================================

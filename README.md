@@ -107,6 +107,8 @@ FDC_Scheduler is a **complete and autonomous** C++ library for railway network m
 
 ### Build
 
+#### Native Build
+
 ```bash
 git clone https://github.com/YOUR_USERNAME/FDC_Scheduler.git
 cd FDC_Scheduler
@@ -125,6 +127,28 @@ cmake --build build -j$(nproc)
 
 # Run demo
 ./examples/railway_ai_integration_example
+```
+
+#### Docker Build
+
+```bash
+# Quick start with helper script
+chmod +x docker-helper.sh
+./docker-helper.sh build
+./docker-helper.sh run simple_example
+
+# Or with Docker directly
+docker build -t fdc_scheduler:latest .
+docker run --rm fdc_scheduler:latest
+
+# Docker Compose (recommended for production)
+docker-compose up fdc_api
+
+# Development environment
+./docker-helper.sh dev
+```
+
+See [Docker Deployment Guide](docs/DOCKER.md) for complete Docker documentation.
 ```
 
 ### Install
