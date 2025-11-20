@@ -22,6 +22,7 @@ endif()
 option(FDC_SCHEDULER_BUILD_EXAMPLES "Build examples" ON)
 option(FDC_SCHEDULER_BUILD_TESTS "Build tests" OFF)
 option(FDC_SCHEDULER_BUILD_SHARED "Build shared library" OFF)
+option(FDC_SCHEDULER_BUILD_PYTHON "Build Python bindings" OFF)
 
 # Include our own headers
 include_directories(
@@ -46,6 +47,16 @@ FetchContent_Declare(
     GIT_TAG v1.14
 )
 FetchContent_MakeAvailable(pugixml)
+
+# pybind11 for Python bindings (only if Python bindings enabled)
+if(FDC_SCHEDULER_BUILD_PYTHON)
+    FetchContent_Declare(
+        pybind11
+        GIT_REPOSITORY https://github.com/pybind/pybind11.git
+        GIT_TAG v2.11.1
+    )
+    FetchContent_MakeAvailable(pybind11)
+endif()
 
 # Google Test (only if tests enabled)
 if(FDC_SCHEDULER_BUILD_TESTS)
@@ -139,6 +150,11 @@ endif()
 # Tests
 if(FDC_SCHEDULER_BUILD_TESTS)
     add_subdirectory(tests)
+endif()
+
+# Python bindings
+if(FDC_SCHEDULER_BUILD_PYTHON)
+    add_subdirectory(python)
 endif()
 
 # Install rules
