@@ -39,6 +39,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(json)
 
+# pugixml for RailML XML parsing
+FetchContent_Declare(
+    pugixml
+    GIT_REPOSITORY https://github.com/zeux/pugixml.git
+    GIT_TAG v1.14
+)
+FetchContent_MakeAvailable(pugixml)
+
 # Google Test (only if tests enabled)
 if(FDC_SCHEDULER_BUILD_TESTS)
     FetchContent_Declare(
@@ -99,6 +107,7 @@ target_link_libraries(fdc_scheduler
     PUBLIC
         nlohmann_json::nlohmann_json
         Boost::graph
+        pugixml::pugixml
 )
 
 # Include directories

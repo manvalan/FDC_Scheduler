@@ -45,10 +45,11 @@ FDC_Scheduler is a **complete and autonomous** C++ library for railway network m
   - JSON API for external optimization engines
   - RailwayAI v2.0 compatible
 
-- 📄 **RailML Support**
-  - Import/Export RailML 2.x
-  - Import/Export RailML 3.x
-  - Native FDC JSON format
+- 📄 **Data Import/Export**
+  - RailML 2.x/3.x export (full support)
+  - RailML 2.x/3.x import (framework ready)
+  - Native JSON format
+  - XML parsing with pugixml
 
 - 🔧 **Flexible Architecture**
   - Header-only option available
