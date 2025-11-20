@@ -41,16 +41,17 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
     
     py::enum_<NodeType>(m, "NodeType")
         .value("STATION", NodeType::STATION, "Major station with multiple platforms")
+        .value("INTERCHANGE", NodeType::INTERCHANGE, "Major interchange/hub station")
         .value("JUNCTION", NodeType::JUNCTION, "Track junction point")
-        .value("HALT", NodeType::HALT, "Small halt with limited platforms")
         .value("DEPOT", NodeType::DEPOT, "Train depot or maintenance facility")
+        .value("YARD", NodeType::YARD, "Railway yard/storage")
         .export_values();
     
     py::enum_<TrackType>(m, "TrackType")
         .value("SINGLE", TrackType::SINGLE, "Single track (bidirectional)")
         .value("DOUBLE", TrackType::DOUBLE, "Double track (unidirectional)")
         .value("HIGH_SPEED", TrackType::HIGH_SPEED, "High-speed line")
-        .value("URBAN", TrackType::URBAN, "Urban/metro line")
+        .value("FREIGHT", TrackType::FREIGHT, "Freight-only track")
         .export_values();
     
     py::enum_<TrainType>(m, "TrainType")
@@ -58,13 +59,13 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
         .value("INTERCITY", TrainType::INTERCITY)
         .value("HIGH_SPEED", TrainType::HIGH_SPEED)
         .value("FREIGHT", TrainType::FREIGHT)
-        .value("SUBURBAN", TrainType::SUBURBAN)
         .export_values();
     
     py::enum_<ConflictType>(m, "ConflictType")
-        .value("SECTION_CONFLICT", ConflictType::SECTION_CONFLICT)
+        .value("SECTION_OVERLAP", ConflictType::SECTION_OVERLAP)
         .value("PLATFORM_CONFLICT", ConflictType::PLATFORM_CONFLICT)
-        .value("HEAD_ON_CONFLICT", ConflictType::HEAD_ON_CONFLICT)
+        .value("HEAD_ON_COLLISION", ConflictType::HEAD_ON_COLLISION)
+        .value("TIMING_VIOLATION", ConflictType::TIMING_VIOLATION)
         .export_values();
     
     py::enum_<ResolutionStrategy>(m, "ResolutionStrategy")
@@ -136,20 +137,29 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
     //==========================================================================
     
     py::class_<Train>(m, "Train")
-        .def(py::init<const std::string&, TrainType, double, double, double>(),
+        .def(py::init<const std::string&, const std::string&, TrainType, double, double, double>(),
              py::arg("id"),
+             py::arg("name"),
              py::arg("type") = TrainType::REGIONAL,
-             py::arg("max_speed") = 120.0,
-             py::arg("length") = 200.0,
-             py::arg("weight") = 400.0,
+             py::arg("max_speed") = 160.0,
+             py::arg("acceleration") = 0.6,
+             py::arg("deceleration") = 0.8,
              "Create a train with physical properties")
         .def("get_id", &Train::get_id, "Get train ID")
+        .def("get_name", &Train::get_name, "Get train name")
         .def("get_type", &Train::get_type, "Get train type")
-        .def("get_max_speed", &Train::get_max_speed, "Get maximum speed")
-        .def("get_length", &Train::get_length, "Get train length in meters")
-        .def("get_weight", &Train::get_weight, "Get train weight in tons")
+        .def("get_max_speed", &Train::get_max_speed, "Get maximum speed (km/h)")
+        .def("get_acceleration", &Train::get_acceleration, "Get acceleration (m/s²)")
+        .def("get_deceleration", &Train::get_deceleration, "Get deceleration (m/s²)")
+        .def("set_max_speed", &Train::set_max_speed, py::arg("speed"), "Set maximum speed")
+        .def("calculate_travel_time", &Train::calculate_travel_time,
+             py::arg("distance_km"),
+             py::arg("track_max_speed"),
+             py::arg("initial_speed") = 0.0,
+             py::arg("final_speed") = 0.0,
+             "Calculate realistic travel time")
         .def("__repr__", [](const Train& t) {
-            return "<Train id='" + t.get_id() + "'>";
+            return "<Train id='" + t.get_id() + "' name='" + t.get_name() + "'>";
         });
     
     //==========================================================================
@@ -192,11 +202,11 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
         .def("add_stop", &TrainSchedule::add_stop, 
              py::arg("stop"),
              "Add a stop to the schedule")
-        .def("get_stops", &TrainSchedule::get_stops, 
+        .def("get_stops", 
+             py::overload_cast<>(&TrainSchedule::get_stops, py::const_),
              py::return_value_policy::reference_internal,
              "Get list of all stops")
-        .def("get_departure_time", &TrainSchedule::get_departure_time, "Get first departure time")
-        .def("get_arrival_time", &TrainSchedule::get_arrival_time, "Get final arrival time")
+        .def("get_stop_count", &TrainSchedule::get_stop_count, "Get number of stops")
         .def("__repr__", [](const TrainSchedule& s) {
             return "<TrainSchedule train='" + s.get_train_id() + "' stops=" + 
                    std::to_string(s.get_stops().size()) + ">";
@@ -225,17 +235,18 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
              "Get all nodes in the network")
         .def("get_all_edges", &RailwayNetwork::get_all_edges,
              "Get all edges in the network")
-        .def("get_node_count", &RailwayNetwork::get_node_count,
+        .def("num_nodes", &RailwayNetwork::num_nodes,
              "Get number of nodes")
-        .def("get_edge_count", &RailwayNetwork::get_edge_count,
+        .def("num_edges", &RailwayNetwork::num_edges,
              "Get number of edges")
         .def("find_shortest_path", &RailwayNetwork::find_shortest_path,
-             py::arg("start"),
-             py::arg("end"),
+             py::arg("start_node"),
+             py::arg("end_node"),
+             py::arg("use_distance") = true,
              "Find shortest path between two nodes")
         .def("__repr__", [](const RailwayNetwork& n) {
-            return "<RailwayNetwork nodes=" + std::to_string(n.get_node_count()) + 
-                   " edges=" + std::to_string(n.get_edge_count()) + ">";
+            return "<RailwayNetwork nodes=" + std::to_string(n.num_nodes()) + 
+                   " edges=" + std::to_string(n.num_edges()) + ">";
         });
     
     //==========================================================================
@@ -247,8 +258,8 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
         .def_readonly("train1_id", &Conflict::train1_id, "First train ID")
         .def_readonly("train2_id", &Conflict::train2_id, "Second train ID")
         .def_readonly("location", &Conflict::location, "Conflict location")
-        .def_readonly("time", &Conflict::time, "Conflict time")
-        .def_readonly("severity", &Conflict::severity, "Conflict severity (0-1)")
+        .def_readonly("conflict_time", &Conflict::conflict_time, "Conflict time")
+        .def_readonly("severity", &Conflict::severity, "Conflict severity (0-10)")
         .def_readonly("description", &Conflict::description, "Human-readable description")
         .def("__repr__", [](const Conflict& c) {
             return "<Conflict type=" + std::to_string(static_cast<int>(c.type)) + 
@@ -263,16 +274,9 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
         .def(py::init<const RailwayNetwork&>(),
              py::arg("network"),
              "Create conflict detector for a network")
-        .def("detect_conflicts", 
-             [](ConflictDetector& self, 
-                const std::vector<std::shared_ptr<TrainSchedule>>& schedules) {
-                 return self.detect_conflicts(schedules);
-             },
+        .def("detect_all", &ConflictDetector::detect_all,
              py::arg("schedules"),
              "Detect all conflicts in the given schedules")
-        .def("set_buffer_time", &ConflictDetector::set_buffer_time,
-             py::arg("seconds"),
-             "Set minimum buffer time between trains (seconds)")
         .def("__repr__", [](const ConflictDetector&) {
             return "<ConflictDetector>";
         });
@@ -283,14 +287,17 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
     
     py::class_<RailwayAIConfig>(m, "RailwayAIConfig")
         .def(py::init<>(), "Create default AI configuration")
-        .def_readwrite("enable_delay", &RailwayAIConfig::enable_delay)
-        .def_readwrite("enable_platform_change", &RailwayAIConfig::enable_platform_change)
-        .def_readwrite("enable_overtaking", &RailwayAIConfig::enable_overtaking)
-        .def_readwrite("enable_speed_adjustment", &RailwayAIConfig::enable_speed_adjustment)
+        .def_readwrite("delay_weight", &RailwayAIConfig::delay_weight)
+        .def_readwrite("platform_change_weight", &RailwayAIConfig::platform_change_weight)
+        .def_readwrite("reroute_weight", &RailwayAIConfig::reroute_weight)
+        .def_readwrite("passenger_impact_weight", &RailwayAIConfig::passenger_impact_weight)
         .def_readwrite("max_delay_minutes", &RailwayAIConfig::max_delay_minutes)
         .def_readwrite("min_headway_seconds", &RailwayAIConfig::min_headway_seconds)
-        .def_readwrite("priority_weight", &RailwayAIConfig::priority_weight)
-        .def_readwrite("delay_cost_weight", &RailwayAIConfig::delay_cost_weight);
+        .def_readwrite("station_dwell_buffer_seconds", &RailwayAIConfig::station_dwell_buffer_seconds)
+        .def_readwrite("allow_single_track_meets", &RailwayAIConfig::allow_single_track_meets)
+        .def_readwrite("prefer_double_track_routing", &RailwayAIConfig::prefer_double_track_routing)
+        .def_readwrite("allow_platform_reassignment", &RailwayAIConfig::allow_platform_reassignment)
+        .def_readwrite("optimize_platform_usage", &RailwayAIConfig::optimize_platform_usage);
     
     //==========================================================================
     // ResolutionResult Class
@@ -301,7 +308,8 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
         .def_readonly("strategy_used", &ResolutionResult::strategy_used)
         .def_readonly("quality_score", &ResolutionResult::quality_score)
         .def_readonly("modified_trains", &ResolutionResult::modified_trains)
-        .def_readonly("resolution_notes", &ResolutionResult::resolution_notes)
+        .def_readonly("description", &ResolutionResult::description)
+        .def_readonly("total_delay", &ResolutionResult::total_delay)
         .def("__repr__", [](const ResolutionResult& r) {
             return "<ResolutionResult success=" + std::string(r.success ? "True" : "False") + 
                    " quality=" + std::to_string(r.quality_score) + ">";
@@ -321,12 +329,12 @@ PYBIND11_MODULE(pyfdc_scheduler, m) {
              "Create AI resolver with custom configuration")
         .def("resolve_conflicts",
              [](RailwayAIResolver& self,
-                const std::vector<Conflict>& conflicts,
-                const std::vector<std::shared_ptr<TrainSchedule>>& schedules) {
-                 return self.resolve_conflicts(conflicts, schedules);
+                std::vector<std::shared_ptr<TrainSchedule>>& schedules,
+                const std::vector<Conflict>& conflicts) {
+                 return self.resolve_conflicts(schedules, conflicts);
              },
-             py::arg("conflicts"),
              py::arg("schedules"),
+             py::arg("conflicts"),
              "Resolve conflicts using AI strategies")
         .def("get_config", &RailwayAIResolver::get_config,
              py::return_value_policy::reference_internal,

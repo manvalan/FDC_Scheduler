@@ -205,7 +205,26 @@ RailwayAIResolver resolver(network);
 auto result = resolver.resolve_conflicts(schedules, conflicts);
 ```
 
-### 2. JSON API
+### 2. Python API (pybind11)
+
+```python
+import pyfdc_scheduler as fdc
+
+# Create network
+network = fdc.RailwayNetwork()
+network.add_node(fdc.Node("MILANO", "Milano Centrale", fdc.NodeType.STATION))
+network.add_edge(fdc.Edge("MILANO", "ROMA", 480.0, fdc.TrackType.HIGH_SPEED))
+
+# Detect conflicts
+detector = fdc.ConflictDetector(network)
+conflicts = detector.detect_all(schedules)
+
+# Resolve with AI
+resolver = fdc.RailwayAIResolver(network)
+result = resolver.resolve_conflicts(schedules, conflicts)
+```
+
+### 3. JSON API
 
 ```cpp
 #include <fdc_scheduler/json_api.hpp>
@@ -215,7 +234,7 @@ std::string network_json = api.get_network_info();
 std::string conflicts_json = api.detect_conflicts();
 ```
 
-### 3. C API (for language bindings)
+### 4. C API (for language bindings)
 
 ```c
 #include <fdc_scheduler/json_api.hpp>
@@ -247,7 +266,8 @@ make -j$(nproc)
 cmake .. \
   -DFDC_SCHEDULER_BUILD_EXAMPLES=ON \
   -DFDC_SCHEDULER_BUILD_TESTS=ON \
-  -DFDC_SCHEDULER_BUILD_SHARED=OFF
+  -DFDC_SCHEDULER_BUILD_SHARED=OFF \
+  -DFDC_SCHEDULER_BUILD_PYTHON=ON
 ```
 
 ### Build Outputs
@@ -256,6 +276,8 @@ cmake .. \
 build/
 ├── libfdc_scheduler.a              # Static library (default)
 ├── libfdc_scheduler.so             # Shared library (optional)
+├── python/
+│   └── pyfdc_scheduler.*.so        # Python module (if -DFDC_SCHEDULER_BUILD_PYTHON=ON)
 └── examples/
     ├── simple_example
     ├── full_example
@@ -291,15 +313,15 @@ build/
 - [x] XML library integration (pugixml v1.14)
 - [x] Examples and documentation
 
-### Phase 4: Future Enhancements 📋 PLANNED
-- [ ] Real-time optimization
-- [ ] Machine learning integration
+### Phase 4: Future Enhancements � IN PROGRESS
+- [x] **Python bindings** - pybind11 v2.11.1 (COMPLETED)
+- [ ] Performance profiling tools
 - [ ] Route rerouting algorithms
 - [ ] Dynamic speed optimization
 - [ ] REST API server (optional)
+- [ ] Real-time optimization
+- [ ] Machine learning integration
 - [ ] WebSocket support (optional)
-- [ ] Python bindings
-- [ ] Performance profiling tools
 
 ## Testing
 
