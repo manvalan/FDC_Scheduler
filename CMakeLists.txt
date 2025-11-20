@@ -155,6 +155,9 @@ set(SCHEDULER_SOURCES
     
     # Database Persistence
     src/database.cpp
+    
+    # Telemetry & Monitoring
+    src/telemetry.cpp
 )
 
 # Create library (static by default, shared if option enabled)
