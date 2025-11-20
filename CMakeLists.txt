@@ -108,6 +108,9 @@ set(SCHEDULER_SOURCES
     
     # REST API
     src/rest_api.cpp
+    
+    # Configuration Management
+    src/config_manager.cpp
 )
 
 # Create library (static by default, shared if option enabled)
