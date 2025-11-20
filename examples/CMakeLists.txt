@@ -7,6 +7,7 @@ add_executable(railway_ai_integration_example railway_ai_integration_example.cpp
 add_executable(stress_test_conflicts stress_test_conflicts.cpp)
 add_executable(timetable_optimizer timetable_optimizer.cpp)
 add_executable(railml_example railml_example.cpp)
+add_executable(benchmark benchmark.cpp)
 
 target_link_libraries(simple_example PRIVATE fdc_scheduler)
 target_link_libraries(full_example PRIVATE fdc_scheduler)
@@ -16,3 +17,4 @@ target_link_libraries(railway_ai_integration_example PRIVATE fdc_scheduler)
 target_link_libraries(stress_test_conflicts PRIVATE fdc_scheduler)
 target_link_libraries(timetable_optimizer PRIVATE fdc_scheduler)
 target_link_libraries(railml_example PRIVATE fdc_scheduler)
+target_link_libraries(benchmark PRIVATE fdc_scheduler)
