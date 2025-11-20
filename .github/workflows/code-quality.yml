@@ -1,0 +1,233 @@
+# =============================================================================
+# Code Quality and Security Checks
+# =============================================================================
+# This workflow runs static analysis and security checks
+# =============================================================================
+
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly on Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  # ===========================================================================
+  # Static Analysis
+  # ===========================================================================
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cppcheck \
+          clang-tidy \
+          clang-format \
+          iwyu
+
+    - name: Run cppcheck
+      run: |
+        cppcheck \
+          --enable=all \
+          --inconclusive \
+          --xml \
+          --xml-version=2 \
+          --suppress=missingIncludeSystem \
+          src/ include/ \
+          2> cppcheck-report.xml || true
+
+    - name: Upload cppcheck report
+      uses: actions/upload-artifact@v4
+      with:
+        name: cppcheck-report
+        path: cppcheck-report.xml
+        retention-days: 30
+
+    - name: Check includes
+      run: |
+        find src include -name "*.cpp" -o -name "*.hpp" | \
+          xargs grep -h "^#include" | \
+          sort | uniq -c | sort -rn > includes-report.txt
+
+    - name: Upload includes report
+      uses: actions/upload-artifact@v4
+      with:
+        name: includes-report
+        path: includes-report.txt
+
+  # ===========================================================================
+  # Code Formatting
+  # ===========================================================================
+  formatting:
+    name: Code Formatting Check
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install clang-format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format
+
+    - name: Check formatting
+      run: |
+        find src include examples -name "*.cpp" -o -name "*.hpp" | \
+          xargs clang-format --dry-run --Werror || \
+          (echo "::error::Code formatting issues found. Run clang-format to fix." && exit 1)
+
+  # ===========================================================================
+  # Security Scanning
+  # ===========================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # ===========================================================================
+  # Dependency Check
+  # ===========================================================================
+  dependencies:
+    name: Dependency Analysis
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check CMake dependencies
+      run: |
+        echo "# Dependencies Report" > dependencies.md
+        echo "" >> dependencies.md
+        echo "## CMake Dependencies" >> dependencies.md
+        grep -E "find_package|FetchContent_Declare" CMakeLists.txt | \
+          sed 's/^/- /' >> dependencies.md || true
+        cat dependencies.md
+
+    - name: Upload dependencies report
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependencies-report
+        path: dependencies.md
+
+  # ===========================================================================
+  # Code Coverage (placeholder for future)
+  # ===========================================================================
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libboost-all-dev lcov
+
+    - name: Configure with coverage
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_FLAGS="--coverage" \
+          -DFDC_SCHEDULER_BUILD_TESTS=OFF
+
+    - name: Build
+      run: cmake --build build -j 4
+
+    - name: Run examples for coverage
+      run: |
+        cd build/examples
+        ./simple_example || true
+        ./config_demo || true
+        ./logging_demo || true
+
+    - name: Generate coverage report
+      run: |
+        lcov --capture --directory build --output-file coverage.info || true
+        lcov --remove coverage.info '/usr/*' '*/test/*' --output-file coverage.info || true
+        lcov --list coverage.info || true
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.info
+        flags: unittests
+        name: codecov-fdc-scheduler
+        fail_ci_if_error: false
+
+  # ===========================================================================
+  # Documentation Check
+  # ===========================================================================
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check for README
+      run: |
+        if [ ! -f README.md ]; then
+          echo "::error::README.md not found"
+          exit 1
+        fi
+        if [ ! -f LICENSE ]; then
+          echo "::warning::LICENSE file not found"
+        fi
+
+    - name: Check documentation structure
+      run: |
+        echo "# Documentation Structure" > doc-structure.txt
+        echo "" >> doc-structure.txt
+        echo "## Main Documentation" >> doc-structure.txt
+        ls -1 *.md 2>/dev/null | sed 's/^/- /' >> doc-structure.txt || true
+        echo "" >> doc-structure.txt
+        echo "## docs/ Directory" >> doc-structure.txt
+        ls -1 docs/*.md 2>/dev/null | sed 's/^/- /' >> doc-structure.txt || true
+        cat doc-structure.txt
+
+    - name: Check for broken links (basic)
+      run: |
+        grep -r "\[.*\](.*)" *.md docs/*.md 2>/dev/null | \
+          grep -v "http" | \
+          while read line; do
+            echo "$line"
+          done > links.txt || true
+
+    - name: Upload documentation report
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation-report
+        path: doc-structure.txt

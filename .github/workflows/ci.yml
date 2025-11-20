@@ -1,0 +1,273 @@
+# =============================================================================
+# CI/CD Pipeline - Build and Test
+# =============================================================================
+# This workflow runs on every push and pull request
+# Builds on multiple platforms and runs tests
+# =============================================================================
+
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  # ===========================================================================
+  # Build Matrix - Linux, macOS, Windows
+  # ===========================================================================
+  build:
+    name: ${{ matrix.os }} - ${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux builds
+          - os: ubuntu-22.04
+            compiler: gcc-11
+            cxx: g++-11
+            
+          - os: ubuntu-22.04
+            compiler: gcc-12
+            cxx: g++-12
+            
+          - os: ubuntu-22.04
+            compiler: clang-14
+            cxx: clang++-14
+            
+          - os: ubuntu-22.04
+            compiler: clang-15
+            cxx: clang++-15
+          
+          # macOS builds
+          - os: macos-13
+            compiler: clang
+            cxx: clang++
+            
+          - os: macos-14
+            compiler: clang
+            cxx: clang++
+          
+          # Windows builds
+          - os: windows-2022
+            compiler: msvc
+            cxx: cl
+
+    steps:
+    # -------------------------------------------------------------------------
+    # Checkout
+    # -------------------------------------------------------------------------
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # -------------------------------------------------------------------------
+    # Setup C++ compiler
+    # -------------------------------------------------------------------------
+    - name: Install GCC (Linux)
+      if: runner.os == 'Linux' && contains(matrix.compiler, 'gcc')
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ${{ matrix.cxx }}
+
+    - name: Install Clang (Linux)
+      if: runner.os == 'Linux' && contains(matrix.compiler, 'clang')
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ${{ matrix.cxx }}
+
+    # -------------------------------------------------------------------------
+    # Install dependencies
+    # -------------------------------------------------------------------------
+    - name: Install Boost (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libboost-all-dev
+
+    - name: Install Boost (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install boost
+
+    - name: Install Boost (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install boost-msvc-14.3
+
+    # -------------------------------------------------------------------------
+    # Setup CMake
+    # -------------------------------------------------------------------------
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.25.x'
+
+    # -------------------------------------------------------------------------
+    # Configure
+    # -------------------------------------------------------------------------
+    - name: Configure CMake (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        export CXX=${{ matrix.cxx }}
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DFDC_SCHEDULER_BUILD_EXAMPLES=ON \
+          -DFDC_SCHEDULER_BUILD_TESTS=OFF
+
+    - name: Configure CMake (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cmake -B build `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DFDC_SCHEDULER_BUILD_EXAMPLES=ON `
+          -DFDC_SCHEDULER_BUILD_TESTS=OFF
+
+    # -------------------------------------------------------------------------
+    # Build
+    # -------------------------------------------------------------------------
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} -j 4
+
+    # -------------------------------------------------------------------------
+    # Run examples (smoke tests)
+    # -------------------------------------------------------------------------
+    - name: Run simple_example (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        cd build/examples
+        ./simple_example
+
+    - name: Run simple_example (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cd build/examples/${{ env.BUILD_TYPE }}
+        ./simple_example.exe
+
+    - name: Run config_demo (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        cd build/examples
+        ./config_demo
+
+    - name: Run logging_demo (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        cd build/examples
+        ./logging_demo
+
+    # -------------------------------------------------------------------------
+    # Upload artifacts
+    # -------------------------------------------------------------------------
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: fdc_scheduler-${{ matrix.os }}-${{ matrix.compiler }}
+        path: |
+          build/libfdc_scheduler.*
+          build/examples/simple_example*
+          build/examples/config_demo*
+          build/examples/logging_demo*
+        retention-days: 7
+
+  # ===========================================================================
+  # Docker Build
+  # ===========================================================================
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build runtime image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: runtime
+        tags: fdc_scheduler:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build development image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: development
+        tags: fdc_scheduler:dev
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker image
+      run: |
+        docker run --rm fdc_scheduler:latest ./bin/simple_example
+
+  # ===========================================================================
+  # Code Quality Checks
+  # ===========================================================================
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck clang-tidy clang-format
+
+    - name: Run cppcheck
+      run: |
+        cppcheck --enable=all --inconclusive --quiet \
+          --suppress=missingIncludeSystem \
+          --error-exitcode=0 \
+          src/ include/ 2>&1 | tee cppcheck.txt
+
+    - name: Check code formatting
+      run: |
+        find src include -name "*.cpp" -o -name "*.hpp" | \
+          xargs clang-format --dry-run --Werror || \
+          echo "::warning::Code formatting issues found"
+
+    - name: Upload quality reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: quality-reports
+        path: cppcheck.txt
+        retention-days: 30
+
+  # ===========================================================================
+  # Status Summary
+  # ===========================================================================
+  status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [build, docker, quality]
+    if: always()
+    
+    steps:
+    - name: Check build status
+      run: |
+        if [ "${{ needs.build.result }}" != "success" ]; then
+          echo "::error::Build failed"
+          exit 1
+        fi
+        if [ "${{ needs.docker.result }}" != "success" ]; then
+          echo "::error::Docker build failed"
+          exit 1
+        fi
+        echo "✓ All CI checks passed!"

@@ -2,10 +2,13 @@
 
 **Complete Standalone Railway Network Scheduling Library**
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/yourusername/FDC_Scheduler)
+[![Build and Test](https://github.com/Manvalan/FDC_Scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/Manvalan/FDC_Scheduler/actions/workflows/ci.yml)
+[![Code Quality](https://github.com/Manvalan/FDC_Scheduler/actions/workflows/code-quality.yml/badge.svg)](https://github.com/Manvalan/FDC_Scheduler/actions/workflows/code-quality.yml)
+[![Docker](https://github.com/Manvalan/FDC_Scheduler/actions/workflows/docker.yml/badge.svg)](https://github.com/Manvalan/FDC_Scheduler/actions/workflows/docker.yml)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/Manvalan/FDC_Scheduler)
 [![C++](https://img.shields.io/badge/C++-17-orange.svg)](https://isocpp.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/Manvalan/FDC_Scheduler)
 
 FDC_Scheduler is a **complete and autonomous** C++ library for railway network management, train scheduling, conflict detection, and AI-powered resolution. Version 2.0 includes all core functionality with no external dependencies (except Boost Graph and nlohmann/json).
 

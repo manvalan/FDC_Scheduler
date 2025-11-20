@@ -1,0 +1,266 @@
+# =============================================================================
+# Release Workflow - Automated Releases
+# =============================================================================
+# This workflow creates GitHub releases and publishes Docker images
+# Triggered by version tags (v*.*.*)
+# =============================================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v2.0.0)'
+        required: true
+        type: string
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  # ===========================================================================
+  # Create GitHub Release
+  # ===========================================================================
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get version
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION="${{ inputs.version }}"
+        else
+          VERSION=${GITHUB_REF#refs/tags/}
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get changes since last tag
+        PREVIOUS_TAG=$(git describe --abbrev=0 --tags $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
+        if [ -n "$PREVIOUS_TAG" ]; then
+          CHANGES=$(git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD)
+        else
+          CHANGES=$(git log --pretty=format:"- %s")
+        fi
+        
+        # Create changelog
+        cat > CHANGELOG.txt << EOF
+        ## What's Changed
+        
+        $CHANGES
+        
+        **Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...${{ steps.get_version.outputs.version }}
+        EOF
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        release_name: FDC_Scheduler ${{ steps.get_version.outputs.version }}
+        body_path: CHANGELOG.txt
+        draft: false
+        prerelease: false
+
+  # ===========================================================================
+  # Build Release Artifacts
+  # ===========================================================================
+  build-artifacts:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: create-release
+    
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact_name: fdc_scheduler-linux-x64
+            
+          - os: macos-13
+            artifact_name: fdc_scheduler-macos-x64
+            
+          - os: macos-14
+            artifact_name: fdc_scheduler-macos-arm64
+            
+          - os: windows-2022
+            artifact_name: fdc_scheduler-windows-x64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Boost (Linux)
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get install -y libboost-all-dev
+
+    - name: Install Boost (macOS)
+      if: runner.os == 'macOS'
+      run: brew install boost
+
+    - name: Install Boost (Windows)
+      if: runner.os == 'Windows'
+      run: choco install boost-msvc-14.3
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.25.x'
+
+    - name: Build
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+        cmake --build build --config ${{ env.BUILD_TYPE }} -j 4
+
+    - name: Package artifacts (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        mkdir -p package/bin package/lib package/include
+        cp build/libfdc_scheduler.* package/lib/
+        cp -r include/fdc_scheduler package/include/
+        cp build/examples/simple_example package/bin/ || true
+        cp build/examples/config_demo package/bin/ || true
+        cp build/examples/logging_demo package/bin/ || true
+        cp README.md LICENSE package/
+        cd package
+        tar -czf ../${{ matrix.artifact_name }}.tar.gz *
+
+    - name: Package artifacts (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        New-Item -ItemType Directory -Force -Path package/bin, package/lib, package/include
+        Copy-Item build/${{ env.BUILD_TYPE }}/fdc_scheduler.lib package/lib/
+        Copy-Item -Recurse include/fdc_scheduler package/include/
+        Copy-Item build/examples/${{ env.BUILD_TYPE }}/simple_example.exe package/bin/ -ErrorAction SilentlyContinue
+        Copy-Item build/examples/${{ env.BUILD_TYPE }}/config_demo.exe package/bin/ -ErrorAction SilentlyContinue
+        Copy-Item build/examples/${{ env.BUILD_TYPE }}/logging_demo.exe package/bin/ -ErrorAction SilentlyContinue
+        Copy-Item README.md, LICENSE package/
+        Compress-Archive -Path package/* -DestinationPath ${{ matrix.artifact_name }}.zip
+
+    - name: Upload Release Asset (Linux/macOS)
+      if: runner.os != 'Windows'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.artifact_name }}.tar.gz
+        asset_name: ${{ matrix.artifact_name }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Release Asset (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.artifact_name }}.zip
+        asset_name: ${{ matrix.artifact_name }}.zip
+        asset_content_type: application/zip
+
+  # ===========================================================================
+  # Build and Push Docker Images
+  # ===========================================================================
+  docker-release:
+    name: Docker Release
+    runs-on: ubuntu-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=raw,value=latest
+
+    - name: Build and push runtime image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: runtime
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push development image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: development
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}:dev
+          ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.version }}-dev
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # ===========================================================================
+  # Publish Documentation
+  # ===========================================================================
+  docs:
+    name: Publish Documentation
+    runs-on: ubuntu-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate API docs (placeholder)
+      run: |
+        echo "# FDC_Scheduler API Documentation" > api-docs.md
+        echo "" >> api-docs.md
+        echo "Version: ${{ needs.create-release.outputs.version }}" >> api-docs.md
+        echo "" >> api-docs.md
+        cat README.md >> api-docs.md
+
+    - name: Upload documentation
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: |
+          README.md
+          docs/
+          api-docs.md
+        retention-days: 90
