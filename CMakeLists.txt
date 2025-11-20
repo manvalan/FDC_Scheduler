@@ -104,6 +104,7 @@ set(SCHEDULER_SOURCES
     # Optimization
     src/route_optimizer.cpp
     src/speed_optimizer.cpp
+    src/realtime_optimizer.cpp
 )
 
 # Create library (static by default, shared if option enabled)
