@@ -20,9 +20,10 @@ endif()
 
 # Options
 option(FDC_SCHEDULER_BUILD_EXAMPLES "Build examples" ON)
-option(FDC_SCHEDULER_BUILD_TESTS "Build tests" OFF)
+option(FDC_SCHEDULER_BUILD_TESTS "Build tests" ON)
 option(FDC_SCHEDULER_BUILD_SHARED "Build shared library" OFF)
 option(FDC_SCHEDULER_BUILD_PYTHON "Build Python bindings" OFF)
+option(FDC_SCHEDULER_ENABLE_COVERAGE "Enable code coverage" OFF)
 
 # Include our own headers
 include_directories(
@@ -208,6 +209,7 @@ endif()
 
 # Tests
 if(FDC_SCHEDULER_BUILD_TESTS)
+    enable_testing()
     add_subdirectory(tests)
 endif()
 
