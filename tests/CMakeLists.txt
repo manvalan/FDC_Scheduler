@@ -45,6 +45,7 @@ set(TEST_SOURCES
     test_telemetry.cpp
     test_config_manager.cpp
     test_logger.cpp
+    test_heavy_scenarios.cpp
 )
 
 # Create test executables
